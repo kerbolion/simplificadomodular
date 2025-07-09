@@ -322,6 +322,26 @@ button:hover {
   border-radius: 4px;
   padding: 8px;
   margin-bottom: 8px;
+  position: relative;
+  /* Mejoras para los controles de reordenamiento de parámetros */
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+}
+
+.param-item .param-content {
+  flex: 1;
+  margin-right: 120px; /* Espacio para los controles */
+}
+
+.param-item .param-controls {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 4px;
+  align-items: center;
 }
 
 /* Campos personalizados */
@@ -332,6 +352,8 @@ button:hover {
   padding: 12px;
   margin-bottom: 8px;
   position: relative;
+  /* Espacio adicional para los controles de reordenamiento */
+  padding-top: 16px;
 }
 
 .custom-field .delete-btn {
@@ -353,4 +375,114 @@ button:hover {
 
 .custom-field .form-group:last-child {
   margin-bottom: 0;
+}
+
+/* Mejoras para controles de reordenamiento en funciones de pasos */
+.function .function-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.function .function-header strong {
+  flex: 1;
+  margin-right: 16px;
+}
+
+.function .step-controls {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+/* Asegurar consistencia en todos los step-controls */
+.step-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.step-controls .step-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.step-controls .step-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.step-controls .step-btn.btn-danger {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.step-controls .step-btn.btn-danger:hover {
+  filter: brightness(1.1);
+}
+
+/* Estilos específicos para campos personalizados en funciones */
+.custom-field .step-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  margin: 0;
+}
+
+/* Estilos específicos para botones de reordenamiento en funciones */
+.function-definition .function-header {
+  align-items: flex-start;
+  min-height: 40px;
+}
+
+.function-definition .function-header > div:first-child {
+  flex: 1;
+  margin-right: 16px;
+}
+
+.function-definition .function-header > div:last-child {
+  flex-shrink: 0;
+}
+
+/* Mejoras para la responsividad de los controles */
+@media (max-width: 768px) {
+  .function-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .function-header > div:last-child {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  
+  .param-item {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: auto;
+    padding-right: 8px;
+  }
+  
+  .param-item .param-content {
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+  
+  .param-item .param-controls {
+    position: static;
+    transform: none;
+    justify-content: center;
+  }
 }

@@ -83,6 +83,53 @@ const functions = {
     this.render();
   },
 
+  // ==========================================
+  // FUNCIONES DE REORDENAMIENTO
+  // ==========================================
+  
+  // Mover función en la lista
+  moveFunction(functionKey, direction) {
+    const keys = Object.keys(this.available);
+    const currentIndex = keys.indexOf(functionKey);
+    const newIndex = currentIndex + direction;
+    
+    if (newIndex >= 0 && newIndex < keys.length) {
+      // Crear nuevo objeto con el orden actualizado
+      const newAvailable = {};
+      const newKeys = [...keys];
+      
+      // Intercambiar posiciones en el array de keys
+      [newKeys[currentIndex], newKeys[newIndex]] = [newKeys[newIndex], newKeys[currentIndex]];
+      
+      // Reconstruir objeto con nuevo orden
+      newKeys.forEach(key => {
+        newAvailable[key] = this.available[key];
+      });
+      
+      this.available = newAvailable;
+      this.save();
+      this.render();
+      updatePrompt();
+    }
+  },
+
+  // Mover parámetro dentro de una función
+  moveParam(functionKey, paramIndex, direction) {
+    const func = this.available[functionKey];
+    if (!func || !func.params) return;
+    
+    const newIndex = paramIndex + direction;
+    
+    if (newIndex >= 0 && newIndex < func.params.length) {
+      // Intercambiar parámetros
+      [func.params[paramIndex], func.params[newIndex]] = [func.params[newIndex], func.params[paramIndex]];
+      
+      this.save();
+      this.render();
+      updatePrompt();
+    }
+  },
+
   // Agregar nueva función
   addFunction() {
     const name = prompt('Nombre clave de la función (ej: my_function):');
@@ -193,8 +240,21 @@ const functions = {
     const container = document.getElementById('functions-list');
     if (!container) return;
 
-    container.innerHTML = Object.keys(this.available).map(key => {
+    const functionKeys = Object.keys(this.available);
+
+    container.innerHTML = functionKeys.map((key, index) => {
       const func = this.available[key];
+      
+      // Controles de reordenamiento para funciones
+      const functionControls = `
+        <div style="display: flex; gap: 4px; align-items: center;">
+          ${index > 0 ? `<button class="btn-small" onclick="functions.moveFunction('${key}', -1)" title="Subir función">⬆️</button>` : ''}
+          ${index < functionKeys.length - 1 ? `<button class="btn-small" onclick="functions.moveFunction('${key}', 1)" title="Bajar función">⬇️</button>` : ''}
+          <button class="btn-small" onclick="functions.editFunction('${key}')">✏️ Editar</button>
+          <button class="btn-small btn-danger" onclick="functions.deleteFunction('${key}')">🗑️</button>
+        </div>
+      `;
+      
       return `
         <div class="function-definition ${this.isUsed(key) ? 'active' : ''}">
           <div class="function-header">
@@ -202,27 +262,34 @@ const functions = {
               <strong>${func.name}</strong>
               <small style="color: var(--text-secondary); margin-left: 8px;">(${key})</small>
             </div>
-            <div>
-              <button class="btn-small" onclick="functions.editFunction('${key}')">✏️ Editar</button>
-              <button class="btn-small btn-danger" onclick="functions.deleteFunction('${key}')">🗑️</button>
-            </div>
+            ${functionControls}
           </div>
           
           <div class="function-meta">
             <p style="margin-bottom: 8px; font-size: 13px;">${func.description}</p>
             <div><strong>Parámetros:</strong></div>
             <div class="function-params">
-              ${func.params.map((param, index) => `
-                <div class="param-item">
-                  <span><strong>${param.label}</strong> (${param.name})</span>
-                  <span style="margin-left: 8px; color: var(--text-secondary);">
-                    ${param.type}${param.required ? ' *' : ''}
-                    ${param.options ? ` [${param.options.join(', ')}]` : ''}
-                  </span>
-                  <button class="btn-small btn-danger" style="float: right; margin: -4px;" 
-                          onclick="functions.deleteParam('${key}', ${index})">×</button>
-                </div>
-              `).join('')}
+              ${func.params.map((param, paramIndex) => {
+                // Controles de reordenamiento para parámetros
+                const paramControls = `
+                  <div style="float: right; display: flex; gap: 4px; align-items: center; margin: -4px;">
+                    ${paramIndex > 0 ? `<button class="btn-small" onclick="functions.moveParam('${key}', ${paramIndex}, -1)" title="Subir parámetro" style="padding: 2px 6px; font-size: 11px;">↑</button>` : ''}
+                    ${paramIndex < func.params.length - 1 ? `<button class="btn-small" onclick="functions.moveParam('${key}', ${paramIndex}, 1)" title="Bajar parámetro" style="padding: 2px 6px; font-size: 11px;">↓</button>` : ''}
+                    <button class="btn-small btn-danger" onclick="functions.deleteParam('${key}', ${paramIndex})" style="padding: 2px 6px; font-size: 11px;">×</button>
+                  </div>
+                `;
+                
+                return `
+                  <div class="param-item" style="position: relative; overflow: hidden;">
+                    ${paramControls}
+                    <span><strong>${param.label}</strong> (${param.name})</span>
+                    <span style="margin-left: 8px; color: var(--text-secondary);">
+                      ${param.type}${param.required ? ' *' : ''}
+                      ${param.options ? ` [${param.options.join(', ')}]` : ''}
+                    </span>
+                  </div>
+                `;
+              }).join('')}
               <button class="btn-small" onclick="functions.addParam('${key}')">➕ Agregar Parámetro</button>
             </div>
           </div>

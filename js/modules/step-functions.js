@@ -26,23 +26,35 @@ function renderStepFunctions(stepIndex, stepFunctions) {
 function renderStepFunction(stepIndex, funcIndex, func) {
   const availableFunctions = functions.getAll();
   const funcDef = availableFunctions[func.type];
+  const stepFunctions = state.flows[state.currentFlow].steps[stepIndex].functions;
   
   if (!funcDef) {
     return `
       <div class="function" style="border-color: var(--danger);">
         <div class="function-header">
           <strong style="color: var(--danger);">⚠️ Función no encontrada: ${func.type}</strong>
-          <button class="delete-btn" onclick="removeFunction(${stepIndex}, ${funcIndex})">×</button>
+          <div style="display: flex; gap: 4px;">
+            <button class="delete-btn" onclick="removeFunction(${stepIndex}, ${funcIndex})">×</button>
+          </div>
         </div>
       </div>
     `;
   }
   
+  // Controles de reordenamiento para funciones en pasos
+  const functionControls = `
+    <div class="step-controls">
+      ${funcIndex > 0 ? `<button class="step-btn" onclick="moveStepFunction(${stepIndex}, ${funcIndex}, -1)" title="Subir función">↑</button>` : ''}
+      ${funcIndex < stepFunctions.length - 1 ? `<button class="step-btn" onclick="moveStepFunction(${stepIndex}, ${funcIndex}, 1)" title="Bajar función">↓</button>` : ''}
+      <button class="step-btn btn-danger" onclick="removeFunction(${stepIndex}, ${funcIndex})" title="Eliminar función">×</button>
+    </div>
+  `;
+  
   return `
     <div class="function">
       <div class="function-header">
         <strong>${funcDef.name}</strong>
-        <button class="delete-btn" onclick="removeFunction(${stepIndex}, ${funcIndex})">×</button>
+        ${functionControls}
       </div>
       
       <div class="form-group">
@@ -125,29 +137,80 @@ function renderCustomFields(stepIndex, funcIndex, func) {
     <div style="margin-top: 12px;">
       <label style="color: var(--text-accent); margin-bottom: 8px; display: block;">Campos personalizados:</label>
       
-      ${customFields.map((field, fieldIndex) => `
-        <div class="custom-field" style="background: var(--bg-tertiary); border: 1px solid var(--border-secondary); border-radius: 6px; padding: 12px; margin-bottom: 8px; position: relative;">
-          <button class="delete-btn" onclick="removeCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex})" style="top: 4px; right: 4px;">×</button>
-          
-          <div class="form-group">
-            <label>Nombre del campo:</label>
-            <input type="text" value="${escapeHtml(field.name || '')}" 
-                   placeholder="Ej: nombre_formulario, whatsapp, mensaje..."
-                   oninput="updateCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, 'name', this.value)">
+      ${customFields.map((field, fieldIndex) => {
+        // Controles de reordenamiento para campos personalizados
+        const fieldControls = `
+          <div class="step-controls" style="position: absolute; top: 8px; right: 8px;">
+            ${fieldIndex > 0 ? `<button class="step-btn" onclick="moveCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, -1)" title="Subir campo">↑</button>` : ''}
+            ${fieldIndex < customFields.length - 1 ? `<button class="step-btn" onclick="moveCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, 1)" title="Bajar campo">↓</button>` : ''}
+            <button class="step-btn btn-danger" onclick="removeCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex})" title="Eliminar campo">×</button>
           </div>
-          
-          <div class="form-group">
-            <label>Valor:</label>
-            <textarea placeholder="Valor del campo..." 
-                      oninput="updateCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, 'value', this.value)">${escapeHtml(field.value || '')}</textarea>
+        `;
+        
+        return `
+          <div class="custom-field" style="background: var(--bg-tertiary); border: 1px solid var(--border-secondary); border-radius: 6px; padding: 12px; margin-bottom: 8px; position: relative;">
+            ${fieldControls}
+            
+            <div class="form-group">
+              <label>Nombre del campo:</label>
+              <input type="text" value="${escapeHtml(field.name || '')}" 
+                     placeholder="Ej: nombre_formulario, whatsapp, mensaje..."
+                     oninput="updateCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, 'name', this.value)">
+            </div>
+            
+            <div class="form-group">
+              <label>Valor:</label>
+              <textarea placeholder="Valor del campo..." 
+                        oninput="updateCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, 'value', this.value)">${escapeHtml(field.value || '')}</textarea>
+            </div>
           </div>
-        </div>
-      `).join('')}
+        `;
+      }).join('')}
       
       <button type="button" class="btn-small" onclick="addCustomField(${stepIndex}, ${funcIndex})">➕ Agregar Campo</button>
     </div>
   `;
 }
+
+// ==========================================
+// FUNCIONES DE REORDENAMIENTO EN PASOS
+// ==========================================
+
+// Mover función dentro de un paso
+function moveStepFunction(stepIndex, funcIndex, direction) {
+  const stepFunctions = state.flows[state.currentFlow].steps[stepIndex].functions;
+  const newIndex = funcIndex + direction;
+  
+  if (newIndex >= 0 && newIndex < stepFunctions.length) {
+    // Intercambiar funciones
+    [stepFunctions[funcIndex], stepFunctions[newIndex]] = [stepFunctions[newIndex], stepFunctions[funcIndex]];
+    
+    renderSteps();
+    updatePrompt();
+    scheduleAutoSave();
+  }
+}
+
+// Mover campo personalizado dentro de una función de paso
+function moveCustomField(stepIndex, funcIndex, fieldIndex, direction) {
+  const func = state.flows[state.currentFlow].steps[stepIndex].functions[funcIndex];
+  if (!func.customFields) return;
+  
+  const newIndex = fieldIndex + direction;
+  
+  if (newIndex >= 0 && newIndex < func.customFields.length) {
+    // Intercambiar campos personalizados
+    [func.customFields[fieldIndex], func.customFields[newIndex]] = [func.customFields[newIndex], func.customFields[fieldIndex]];
+    
+    renderSteps();
+    updatePrompt();
+    scheduleAutoSave();
+  }
+}
+
+// ==========================================
+// FUNCIONES EXISTENTES (SIN CAMBIOS)
+// ==========================================
 
 function addFunction(stepIndex) {
   const availableFunctions = functions.getAll();
