@@ -92,8 +92,12 @@ function moveStep(index, direction) {
 
 function updateStepText(index, value) {
   state.flows[state.currentFlow].steps[index].text = value;
-  updatePrompt();
-  scheduleAutoSave();
+  // Usar debounce para evitar llamadas excesivas
+  clearTimeout(window.stepTextTimeout);
+  window.stepTextTimeout = setTimeout(() => {
+    updatePrompt();
+    scheduleAutoSave();
+  }, 300);
 }
 
 function renderSteps() {

@@ -18,8 +18,12 @@ function removeFAQ(index) {
 
 function updateFAQ(index, field, value) {
   state.faqs[index][field] = value;
-  updatePrompt();
-  scheduleAutoSave();
+  // Usar debounce para evitar llamadas excesivas
+  clearTimeout(window.faqTimeout);
+  window.faqTimeout = setTimeout(() => {
+    updatePrompt();
+    scheduleAutoSave();
+  }, 300);
 }
 
 function renderFAQs() {

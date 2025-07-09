@@ -140,8 +140,12 @@ function moveField(fieldIndex, direction) {
 
 function updateTextField(fieldIndex, value) {
   state.sections[state.currentSection].fields[fieldIndex].value = value;
-  updatePrompt();
-  scheduleAutoSave();
+  // Usar debounce para evitar llamadas excesivas
+  clearTimeout(window.textFieldTimeout);
+  window.textFieldTimeout = setTimeout(() => {
+    updatePrompt();
+    scheduleAutoSave();
+  }, 300);
 }
 
 // Nuevas funciones para campos de texto como listas
@@ -174,8 +178,12 @@ function moveTextItem(fieldIndex, itemIndex, direction) {
 
 function updateTextItem(fieldIndex, itemIndex, value) {
   state.sections[state.currentSection].fields[fieldIndex].items[itemIndex] = value;
-  updatePrompt();
-  scheduleAutoSave();
+  // Usar debounce para evitar llamadas excesivas
+  clearTimeout(window.textItemTimeout);
+  window.textItemTimeout = setTimeout(() => {
+    updatePrompt();
+    scheduleAutoSave();
+  }, 300);
 }
 
 function addListItem(fieldIndex) {
@@ -207,8 +215,12 @@ function moveListItem(fieldIndex, itemIndex, direction) {
 
 function updateListItem(fieldIndex, itemIndex, value) {
   state.sections[state.currentSection].fields[fieldIndex].items[itemIndex] = value;
-  updatePrompt();
-  scheduleAutoSave();
+  // Usar debounce para evitar llamadas excesivas
+  clearTimeout(window.listItemTimeout);
+  window.listItemTimeout = setTimeout(() => {
+    updatePrompt();
+    scheduleAutoSave();
+  }, 300);
 }
 
 function renderSectionContent() {

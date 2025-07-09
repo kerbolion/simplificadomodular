@@ -110,8 +110,12 @@ function updateFunctionParam(stepIndex, funcIndex, paramName, value) {
   const func = state.flows[state.currentFlow].steps[stepIndex].functions[funcIndex];
   if (!func.params) func.params = {};
   func.params[paramName] = value;
-  updatePrompt();
-  scheduleAutoSave();
+  // Usar debounce para evitar llamadas excesivas
+  clearTimeout(window.functionParamTimeout);
+  window.functionParamTimeout = setTimeout(() => {
+    updatePrompt();
+    scheduleAutoSave();
+  }, 300);
 }
 
 function renderCustomFields(stepIndex, funcIndex, func) {
@@ -212,6 +216,10 @@ function updateCustomField(stepIndex, funcIndex, fieldIndex, property, value) {
   if (!func.customFields[fieldIndex]) func.customFields[fieldIndex] = {};
   
   func.customFields[fieldIndex][property] = value;
-  updatePrompt();
-  scheduleAutoSave();
+  // Usar debounce para evitar llamadas excesivas
+  clearTimeout(window.customFieldTimeout);
+  window.customFieldTimeout = setTimeout(() => {
+    updatePrompt();
+    scheduleAutoSave();
+  }, 300);
 }
