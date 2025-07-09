@@ -1,0 +1,136 @@
+/* ==========================================
+   CSS BASE - Variables, Reset, Tipografía
+   ========================================== */
+
+/* Variables CSS */
+:root {
+  /* Colores principales */
+  --bg-primary: #f6f8fa;
+  --bg-secondary: #fff;
+  --bg-tertiary: #f8fafe;
+  --border-primary: #e4dbfa;
+  --border-secondary: #dad2ee;
+  --text-primary: #292340;
+  --text-secondary: #3d3663;
+  --text-accent: #5a40c6;
+  --input-bg: #fafaff;
+  --shadow-light: #decaf820;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  
+  /* Colores para el output */
+  --output-bg: #1e1e1e;
+  --output-text: #d4d4d4;
+  --color-title: #569cd6;
+  --color-section: #4ec9b0;
+  --color-function: #dcdcaa;
+  --color-number: #b5cea8;
+  --color-keyword: #c586c0;
+  --color-string: #ce9178;
+  --color-comment: #6a9955;
+  
+  /* Espaciado */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* Bordes */
+  --border-radius: 6px;
+  --border-radius-sm: 4px;
+  --border-radius-lg: 8px;
+  
+  /* Fuentes */
+  --font-family: 'Segoe UI', Arial, sans-serif;
+  --font-family-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 1.5rem;
+  
+  /* Transiciones */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+}
+
+/* Reset básico */
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+}
+
+/* Tipografía base */
+body {
+  font-family: var(--font-family);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: var(--transition-normal);
+  line-height: 1.5;
+}
+
+/* Títulos */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+h2 {
+  margin-bottom: var(--spacing-lg);
+  color: var(--text-accent);
+  font-size: var(--font-size-xl);
+}
+
+h3 {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+/* Enlaces */
+a {
+  color: var(--text-accent);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* Scroll personalizado */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: var(--border-radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-accent);
+}
+
+/* Animaciones */
+.fade-in {
+  animation: fadeIn var(--transition-normal);
+}
+
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}

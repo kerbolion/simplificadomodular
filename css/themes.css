@@ -1,0 +1,139 @@
+/* ==========================================
+   CSS THEMES - Modo claro/oscuro
+   ========================================== */
+
+/* Tema oscuro */
+[data-theme="dark"] {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d30;
+  --border-primary: #3e3e42;
+  --border-secondary: #464647;
+  --text-primary: #cccccc;
+  --text-secondary: #c5c5c5;
+  --text-accent: #569cd6;
+  --input-bg: #3c3c3c;
+  --shadow-light: #00000020;
+  
+  /* Mantener colores del output consistentes en modo oscuro */
+  --output-bg: #1e1e1e;
+  --output-text: #d4d4d4;
+}
+
+/* Iconos del botón de tema */
+[data-theme="light"] .theme-toggle::before { 
+  content: "🌙"; 
+}
+
+[data-theme="dark"] .theme-toggle::before { 
+  content: "☀️"; 
+}
+
+/* Colores específicos para el output del prompt */
+.output-title {
+  color: var(--color-title);
+  font-weight: bold;
+}
+
+.output-section {
+  color: var(--color-section);
+  font-weight: bold;
+}
+
+.output-step-number {
+  color: var(--color-number);
+  font-weight: bold;
+}
+
+.output-function {
+  color: var(--color-function);
+  font-style: italic;
+}
+
+.output-keyword {
+  color: var(--color-keyword);
+}
+
+.output-string {
+  color: var(--color-string);
+}
+
+.output-comment {
+  color: var(--color-comment);
+  font-style: italic;
+}
+
+.output-question {
+  color: var(--color-title);
+  font-weight: bold;
+}
+
+.output-answer {
+  color: var(--output-text);
+  margin-left: 20px;
+}
+
+/* Transiciones suaves para cambio de tema */
+* {
+  transition: 
+    background-color var(--transition-normal),
+    border-color var(--transition-normal),
+    color var(--transition-normal);
+}
+
+/* Evitar transición en elementos específicos */
+.copy-btn,
+.theme-toggle,
+button:hover {
+  transition: 
+    background-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+/* Mejoras visuales específicas para modo oscuro */
+[data-theme="dark"] .step-number {
+  background: linear-gradient(90deg, #4a4a4a, #6a6a6a);
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .projects-section {
+  border-color: var(--text-accent);
+  background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+}
+
+[data-theme="dark"] .btn-small {
+  background: #3d3d3d;
+  color: #cccccc;
+}
+
+/* Scrollbar para modo oscuro */
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-accent);
+}
+
+/* Hover states específicos para modo oscuro */
+[data-theme="dark"] button:hover {
+  filter: brightness(1.2);
+}
+
+[data-theme="dark"] .tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Mejoras de contraste para modo oscuro */
+[data-theme="dark"] .function-definition.active {
+  box-shadow: 0 0 0 2px rgba(86, 156, 214, 0.3);
+}
+
+[data-theme="dark"] .copy-btn:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+}

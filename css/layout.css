@@ -1,0 +1,215 @@
+/* ==========================================
+   CSS LAYOUT - Contenedores, Grid, Responsive
+   ========================================== */
+
+/* Contenedor principal */
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+/* Paneles */
+.panel {
+  flex: 1;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+  background: var(--bg-secondary);
+}
+
+.panel.output {
+  background: var(--output-bg);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  position: relative;
+  padding-top: 80px;
+  color: var(--output-text);
+}
+
+/* Secciones */
+.section {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: 20px;
+}
+
+.projects-section {
+  border: 2px solid var(--text-accent);
+  background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+}
+
+.project-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: 12px;
+}
+
+/* Pasos */
+.step {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  position: relative;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.step-number {
+  background: linear-gradient(90deg, #e3d7fa, #f7c5da);
+  color: #8038b6;
+  padding: 4px 12px;
+  border-radius: var(--border-radius);
+  font-weight: 700;
+  font-size: var(--font-size-base);
+}
+
+/* Funciones */
+.function {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-top: 12px;
+  position: relative;
+}
+
+.function-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.function-meta {
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  border-left: 3px solid var(--text-accent);
+}
+
+.function-definition {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  position: relative;
+}
+
+.function-definition.active {
+  border-color: var(--text-accent);
+  box-shadow: 0 0 0 2px rgba(90, 64, 198, 0.1);
+}
+
+.function-params {
+  margin-top: 12px;
+}
+
+.param-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+/* Campos personalizados */
+.custom-field {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius);
+  padding: 12px;
+  margin-bottom: var(--spacing-sm);
+  position: relative;
+}
+
+.custom-field .delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.custom-field .form-group {
+  margin-bottom: var(--spacing-sm);
+}
+
+.custom-field .form-group:last-child {
+  margin-bottom: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+  }
+  
+  .form-row {
+    flex-direction: column;
+  }
+  
+  .project-controls {
+    justify-content: center;
+  }
+  
+  .theme-toggle {
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+  }
+  
+  .panel {
+    padding: var(--spacing-md);
+  }
+  
+  .copy-btn {
+    top: 10px;
+    left: 10px;
+    padding: 8px 12px;
+    font-size: var(--font-size-sm);
+  }
+}
+
+@media (max-width: 480px) {
+  .form-row {
+    gap: var(--spacing-sm);
+  }
+  
+  .tabs {
+    flex-wrap: wrap;
+  }
+  
+  .tab {
+    min-width: 120px;
+  }
+  
+  .step-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+  
+  .step-controls {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+}
