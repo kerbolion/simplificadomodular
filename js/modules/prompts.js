@@ -94,12 +94,14 @@ function updatePrompt() {
   });
 
   // Preguntas frecuentes (movidas al final)
-  const validFaqs = state.faqs.filter(f => f.question.trim() && f.answer.trim());
+  const validFaqs = state.faqs.filter(f => f.question.trim()); // Solo verificar que la pregunta tenga contenido
   if (validFaqs.length > 0) {
     html += `<span class="output-section">**Preguntas Frecuentes:**</span>\n`;
     validFaqs.forEach(faq => {
       html += `- <span class="output-question">**${faq.question}**</span>\n`;
-      html += `  <span class="output-answer">${faq.answer}</span>\n`;
+      if (faq.answer.trim()) {
+        html += `  <span class="output-answer">${faq.answer}</span>\n`;
+      }
     });
     html += '\n';
   }
