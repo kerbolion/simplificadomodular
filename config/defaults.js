@@ -166,27 +166,35 @@ const defaults = {
       { id: 'functions', label: '⚡ Funciones', icon: '⚡' }
     ],
 
-    // Configuración de formularios
-    form: {
-      autoSave: true,
-      autoSaveDelay: 1000,
-      validateOnInput: true,
-      showValidationErrors: true
+    // Mensajes por defecto
+    messages: {
+      confirmDelete: '¿Estás seguro de que quieres eliminar este elemento?',
+      saveSuccess: 'Guardado exitosamente',
+      saveError: 'Error al guardar',
+      loadError: 'Error al cargar',
+      emptyProject: 'Por favor, ingresa un nombre para el proyecto',
+      projectSaved: 'Proyecto guardado exitosamente',
+      projectDeleted: 'Proyecto eliminado exitosamente',
+      importSuccess: 'Importado exitosamente',
+      exportSuccess: 'Exportado exitosamente',
+      noChanges: 'No hay cambios para guardar',
+      invalidData: 'Datos inválidos'
     },
 
     // Configuración de notificaciones
     notifications: {
       duration: 3000,
       position: 'top-right',
-      showCopyFeedback: true,
-      showAutoSaveFeedback: true
+      maxVisible: 5
     },
 
     // Configuración de modales
     modals: {
+      defaultWidth: '500px',
+      defaultHeight: 'auto',
+      backdrop: true,
       closeOnEscape: true,
-      closeOnOverlayClick: true,
-      showCloseButton: true
+      closeOnBackdrop: true
     }
   },
 
@@ -195,34 +203,40 @@ const defaults = {
   // ==========================================
   
   validation: {
-    // Límites de texto
-    limits: {
-      projectName: { min: 2, max: 50 },
-      businessName: { min: 2, max: 100 },
-      sectionName: { min: 1, max: 50 },
-      flowName: { min: 1, max: 50 },
-      stepText: { min: 1, max: 500 },
-      faqQuestion: { min: 1, max: 200 },
-      faqAnswer: { min: 1, max: 1000 },
-      functionName: { min: 1, max: 50 },
-      functionDescription: { max: 200 }
+    projectName: {
+      minLength: 2,
+      maxLength: 50,
+      pattern: /^[a-zA-Z0-9\s\-_]+$/,
+      message: 'El nombre del proyecto debe tener entre 2 y 50 caracteres y solo puede contener letras, números, espacios, guiones y guiones bajos'
     },
-
-    // Patrones de validación
-    patterns: {
-      functionKey: /^[a-zA-Z_][a-zA-Z0-9_]*$/,
-      parameterName: /^[a-zA-Z_][a-zA-Z0-9_]*$/,
-      whatsappNumber: /^\+?[\d\s\-\(\)]{10,15}$/,
-      email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    
+    businessName: {
+      minLength: 2,
+      maxLength: 100,
+      message: 'El nombre del negocio debe tener entre 2 y 100 caracteres'
     },
-
-    // Mensajes de error
-    messages: {
-      required: 'Este campo es requerido',
-      minLength: 'Debe tener al menos {min} caracteres',
-      maxLength: 'No puede tener más de {max} caracteres',
-      pattern: 'Formato inválido',
-      duplicate: 'Ya existe un elemento con este nombre'
+    
+    faqQuestion: {
+      minLength: 5,
+      maxLength: 200,
+      message: 'La pregunta debe tener entre 5 y 200 caracteres'
+    },
+    
+    faqAnswer: {
+      minLength: 5,
+      maxLength: 1000,
+      message: 'La respuesta debe tener entre 5 y 1000 caracteres'
+    },
+    
+    stepText: {
+      minLength: 10,
+      maxLength: 500,
+      message: 'El texto del paso debe tener entre 10 y 500 caracteres'
+    },
+    
+    functionName: {
+      pattern: /^[a-zA-Z_][a-zA-Z0-9_]*$/,
+      message: 'El nombre de la función debe empezar con letra o guión bajo y solo contener letras, números y guiones bajos'
     }
   },
 
@@ -231,144 +245,136 @@ const defaults = {
   // ==========================================
   
   export: {
-    // Formatos disponibles
-    formats: {
-      json: { extension: 'json', mimeType: 'application/json' },
-      txt: { extension: 'txt', mimeType: 'text/plain' },
-      html: { extension: 'html', mimeType: 'text/html' },
-      csv: { extension: 'csv', mimeType: 'text/csv' }
-    },
-
-    // Configuración de nombres de archivo
-    fileNames: {
-      project: '{name}_{timestamp}',
-      prompt: '{businessName}_prompt',
-      functions: 'functions_{timestamp}',
-      faqs: 'faqs_{timestamp}',
-      backup: 'backup_{timestamp}'
+    formats: ['json', 'txt', 'html', 'csv'],
+    defaultFormat: 'txt',
+    includeMetadata: true,
+    compression: false,
+    
+    // Plantillas de exportación
+    templates: {
+      json: {
+        extension: 'json',
+        mimeType: 'application/json',
+        pretty: true
+      },
+      txt: {
+        extension: 'txt',
+        mimeType: 'text/plain',
+        encoding: 'utf-8'
+      },
+      html: {
+        extension: 'html',
+        mimeType: 'text/html',
+        includeStyles: true
+      },
+      csv: {
+        extension: 'csv',
+        mimeType: 'text/csv',
+        delimiter: ',',
+        quote: '"'
+      }
     }
   },
 
   // ==========================================
-  // CONFIGURACIÓN DE TEMAS
+  // CONFIGURACIÓN DE BACKUP
   // ==========================================
   
-  themes: {
-    // Tema por defecto
-    default: 'light',
-    
-    // Detectar preferencia del sistema
-    detectSystemPreference: true,
-    
-    // Animar cambios de tema
-    animateTransitions: true,
-    
-    // Colores personalizables
-    customizable: [
-      '--text-accent',
-      '--success',
-      '--danger',
-      '--warning'
-    ]
+  backup: {
+    autoBackup: true,
+    interval: 300000, // 5 minutos
+    maxBackups: 10,
+    includeVersions: true,
+    compressBackups: false
   },
 
   // ==========================================
-  // CONFIGURACIÓN DE ATAJOS
+  // CONFIGURACIÓN DE RENDIMIENTO
   // ==========================================
   
-  shortcuts: {
-    // Habilitar atajos por defecto
-    enableDefaults: true,
-    
-    // Mostrar feedback visual
-    showFeedback: true,
-    
-    // Permitir personalización
-    allowCustomization: true,
-    
-    // Atajos deshabilitados por defecto
-    disabled: []
+  performance: {
+    debounceDelay: 300,
+    throttleDelay: 100,
+    maxHistoryEntries: 50,
+    lazyLoadThreshold: 100,
+    virtualScrollThreshold: 1000
   },
 
   // ==========================================
-  // CONFIGURACIÓN DE DESARROLLO
+  // CONFIGURACIÓN DE ACCESIBILIDAD
   // ==========================================
   
-  development: {
-    // Nivel de logging
-    logLevel: 'info', // 'debug', 'info', 'warn', 'error'
-    
-    // Mostrar información de debug
-    showDebugInfo: false,
-    
-    // Habilitar modo debug
-    debugMode: false,
-    
-    // Guardar logs en localStorage
-    saveLogs: false
+  accessibility: {
+    enableKeyboardNavigation: true,
+    announceChanges: true,
+    highContrast: false,
+    largeText: false,
+    reduceMotion: false
   },
 
   // ==========================================
-  // PLANTILLAS PREDEFINIDAS
+  // PLANTILLAS Y EJEMPLOS
   // ==========================================
   
   templates: {
-    // Plantillas de negocio
-    business: {
-      restaurant: {
+    // Plantillas de proyectos
+    projects: {
+      'restaurante': {
         name: 'Restaurante',
-        sections: [
-          {
-            name: 'Información del Restaurante',
-            fields: [
-              { type: 'text', label: 'Horarios', items: ['Lunes a Domingo 11:00 AM - 10:00 PM'] },
-              { type: 'text', label: 'Delivery', items: ['Disponible en radio de 5km'] }
-            ]
-          }
-        ],
-        faqs: [
-          { question: '¿Cuáles son los horarios?', answer: 'Atendemos de 11:00 AM a 10:00 PM todos los días' },
-          { question: '¿Hacen delivery?', answer: 'Sí, hacemos delivery en un radio de 5km' }
-        ]
+        description: 'Plantilla para toma de pedidos de restaurante',
+        data: {
+          businessName: 'Mi Restaurante',
+          sections: [
+            {
+              name: "Configuración del Restaurante",
+              fields: [
+                { type: "text", label: "Horarios", items: ["Lunes a Domingo 11:00 AM - 10:00 PM"] },
+                { type: "text", label: "Delivery", items: ["Disponible en radio de 5km", "Tiempo estimado: 30-45 min"] }
+              ]
+            }
+          ],
+          faqs: [
+            { question: "¿Cuál es el tiempo de entrega?", answer: "El tiempo estimado de entrega es de 30 a 45 minutos" },
+            { question: "¿Cuál es el monto mínimo para delivery?", answer: "El monto mínimo para delivery es de $15" }
+          ]
+        }
       },
       
-      ecommerce: {
-        name: 'E-commerce',
-        sections: [
-          {
-            name: 'Información de Ventas',
-            fields: [
-              { type: 'text', label: 'Formas de pago', items: ['Efectivo', 'Tarjetas', 'Transferencias'] },
-              { type: 'text', label: 'Envíos', items: ['Envío gratis por compras mayores a $50'] }
-            ]
-          }
-        ],
-        faqs: [
-          { question: '¿Qué formas de pago aceptan?', answer: 'Aceptamos efectivo, tarjetas y transferencias' },
-          { question: '¿Cuánto cuesta el envío?', answer: 'Envío gratis por compras mayores a $50, sino $5' }
-        ]
+      'servicios': {
+        name: 'Servicios Profesionales',
+        description: 'Plantilla para agendamiento de servicios',
+        data: {
+          businessName: 'Mi Empresa de Servicios',
+          sections: [
+            {
+              name: "Información de Servicios",
+              fields: [
+                { type: "list", label: "Servicios disponibles", items: ["Consultoría", "Mantenimiento", "Soporte técnico"] }
+              ]
+            }
+          ]
+        }
       }
     },
 
-    // Plantillas de funciones
-    functions: {
-      crm: [
+    // Plantillas de funciones comunes
+    functionTemplates: {
+      'ecommerce': [
         {
-          key: 'save_lead',
-          name: 'Guardar Lead',
-          description: 'Guarda información de prospecto en CRM',
+          key: 'add_to_cart',
+          name: 'Agregar al carrito',
+          description: 'Agrega un producto al carrito de compras',
           params: [
-            { name: 'name', label: 'Nombre *', type: 'text', required: true },
-            { name: 'phone', label: 'Teléfono', type: 'text', required: false },
-            { name: 'email', label: 'Email', type: 'text', required: false }
+            { name: 'product_id', label: 'ID del producto *', type: 'text', required: true },
+            { name: 'quantity', label: 'Cantidad', type: 'text', required: false }
           ]
         }
       ],
       
-      calendar: [
+      'appointments': [
         {
           key: 'schedule_appointment',
-          name: 'Agendar Cita',
+          name: 'Agendar cita',
           description: 'Programa una cita en el calendario',
           params: [
             { name: 'date', label: 'Fecha *', type: 'text', required: true },
@@ -381,20 +387,50 @@ const defaults = {
   },
 
   // ==========================================
+  // CONFIGURACIÓN DE DESARROLLO
+  // ==========================================
+  
+  development: {
+    debug: false,
+    logLevel: 'info', // 'debug', 'info', 'warn', 'error'
+    enableDevTools: false,
+    mockData: false,
+    simulateNetworkDelay: false
+  },
+
+  // ==========================================
+  // CONFIGURACIÓN DE INTEGRACIÓN
+  // ==========================================
+  
+  integration: {
+    webhooks: {
+      enabled: false,
+      endpoints: [],
+      retryAttempts: 3,
+      timeout: 5000
+    },
+    
+    apis: {
+      timeout: 10000,
+      retries: 2,
+      baseUrl: ''
+    }
+  },
+
+  // ==========================================
   // MÉTODOS DE UTILIDAD
   // ==========================================
   
-  // Obtener configuración específica
+  // Obtener configuración por clave
   get(path, defaultValue = null) {
     const keys = path.split('.');
     let current = this;
     
     for (const key of keys) {
-      if (current && typeof current === 'object' && key in current) {
-        current = current[key];
-      } else {
+      if (current[key] === undefined) {
         return defaultValue;
       }
+      current = current[key];
     }
     
     return current;
@@ -407,7 +443,7 @@ const defaults = {
     let current = this;
     
     for (const key of keys) {
-      if (!(key in current) || typeof current[key] !== 'object') {
+      if (!current[key]) {
         current[key] = {};
       }
       current = current[key];
@@ -421,7 +457,7 @@ const defaults = {
     return this.deepMerge(this, customConfig);
   },
 
-  // Merge profundo de objetos
+  // Fusión profunda de objetos
   deepMerge(target, source) {
     const result = { ...target };
     
@@ -436,73 +472,42 @@ const defaults = {
     return result;
   },
 
-  // Resetear a valores por defecto
-  reset() {
-    // Limpiar localStorage
-    const keysToKeep = ['theme', 'customShortcuts'];
-    const currentStorage = {};
+  // Validar configuración
+  validate() {
+    const errors = [];
     
-    keysToKeep.forEach(key => {
-      const value = localStorage.getItem(key);
-      if (value) currentStorage[key] = value;
-    });
+    // Validar estructura básica
+    if (!this.app || !this.app.name) {
+      errors.push('Falta configuración de la aplicación');
+    }
     
-    localStorage.clear();
+    if (!this.initialSections || !Array.isArray(this.initialSections)) {
+      errors.push('Secciones iniciales inválidas');
+    }
     
-    // Restaurar configuración que queremos mantener
-    Object.keys(currentStorage).forEach(key => {
-      localStorage.setItem(key, currentStorage[key]);
-    });
+    if (!this.defaultFunctions || typeof this.defaultFunctions !== 'object') {
+      errors.push('Funciones por defecto inválidas');
+    }
     
-    // Recargar página para aplicar defaults
-    window.location.reload();
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   },
 
   // Exportar configuración actual
-  exportConfig() {
-    const config = {
-      app: this.app,
-      ui: this.ui,
-      validation: this.validation,
-      themes: this.themes,
-      shortcuts: this.shortcuts,
-      timestamp: new Date().toISOString()
-    };
-    
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `app-config-${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  export() {
+    return JSON.stringify(this, null, 2);
   },
 
-  // Importar configuración
-  async importConfig(file) {
+  // Cargar configuración desde JSON
+  load(configJson) {
     try {
-      const content = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
-      
-      const config = JSON.parse(content);
-      
-      // Validar y aplicar configuración
-      if (config.app) Object.assign(this.app, config.app);
-      if (config.ui) Object.assign(this.ui, config.ui);
-      if (config.validation) Object.assign(this.validation, config.validation);
-      if (config.themes) Object.assign(this.themes, config.themes);
-      if (config.shortcuts) Object.assign(this.shortcuts, config.shortcuts);
-      
+      const config = JSON.parse(configJson);
+      Object.assign(this, config);
       return true;
     } catch (error) {
-      console.error('Error importando configuración:', error);
+      console.error('Error cargando configuración:', error);
       return false;
     }
   }

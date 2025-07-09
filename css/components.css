@@ -1,6 +1,49 @@
-/* ==========================================
-   CSS COMPONENTS - Botones, Forms, Tabs
-   ========================================== */
+/* Componentes reutilizables */
+
+/* Formularios */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row > * {
+  flex: 1;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-secondary);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--text-accent);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
 
 /* Botones */
 button {
@@ -8,11 +51,11 @@ button {
   color: white;
   border: none;
   padding: 10px 16px;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  font-size: var(--font-size-base);
-  transition: var(--transition-fast);
+  font-size: 14px;
+  transition: all 0.2s ease;
 }
 
 button:hover {
@@ -20,19 +63,13 @@ button:hover {
   transform: translateY(-1px);
 }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
 .btn-small {
   padding: 6px 12px;
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   background: #ede6fb;
   color: #4d3497;
-  margin-right: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
+  margin-right: 8px;
+  margin-bottom: 8px;
 }
 
 .btn-danger {
@@ -50,70 +87,63 @@ button:disabled {
   color: white;
 }
 
-/* Formularios */
-.form-group {
-  margin-bottom: var(--spacing-md);
-}
-
-.form-row {
-  display: flex;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-}
-
-.form-row > * {
-  flex: 1;
-}
-
-label {
-  display: block;
+/* Botón copiar */
+.copy-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: linear-gradient(135deg, var(--success), #059669);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
   font-weight: 600;
-  margin-bottom: 6px;
-  color: var(--text-secondary);
-  font-size: var(--font-size-base);
-}
-
-input, textarea, select {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid var(--border-secondary);
-  border-radius: var(--border-radius);
-  background: var(--input-bg);
-  color: var(--text-primary);
-  font-size: var(--font-size-base);
-  transition: var(--transition-fast);
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--text-accent);
-}
-
-textarea {
-  resize: vertical;
-  min-height: 60px;
-  font-family: inherit;
-}
-
-/* Checkboxes */
-.checkbox-label {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  font-weight: normal;
-  margin-bottom: 10px;
+  gap: 8px;
+  transition: all 0.3s ease;
+  z-index: 10;
 }
 
-.checkbox-label input[type="checkbox"] {
-  width: auto;
-  margin: 0;
+.copy-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* En tema oscuro, el botón debe destacar más */
+[data-theme="dark"] .copy-btn {
+  background: linear-gradient(135deg, #10b981, #047857);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* Secciones */
+.section {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.projects-section {
+  border: 2px solid var(--text-accent);
+  background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+}
+
+.project-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 /* Pestañas */
 .tabs {
   display: flex;
   background: var(--bg-tertiary);
-  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+  border-radius: 8px 8px 0 0;
   border: 1px solid var(--border-secondary);
   margin-bottom: 0;
 }
@@ -122,11 +152,11 @@ textarea {
   flex: 1;
   background: transparent;
   border: none;
-  padding: var(--spacing-md);
+  padding: 16px;
   cursor: pointer;
   color: var(--text-secondary);
-  transition: var(--transition-fast);
-  font-size: var(--font-size-base);
+  transition: all 0.2s ease;
+  font-size: 14px;
 }
 
 .tab.active {
@@ -141,23 +171,103 @@ textarea {
   background: var(--bg-secondary);
   border: 1px solid var(--border-secondary);
   border-top: none;
-  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
-  padding: var(--spacing-lg);
+  border-radius: 0 0 8px 8px;
+  padding: 24px;
 }
 
 .tab-content.active {
   display: block;
 }
 
-/* Listas dinámicas */
+/* Pasos */
+.step {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.step-number {
+  background: linear-gradient(90deg, #e3d7fa, #f7c5da);
+  color: #8038b6;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.step-controls {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.step-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Funciones */
+.function {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 6px;
+  padding: 12px;
+  margin-top: 12px;
+  position: relative;
+}
+
+.function-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.function-meta {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  padding: 8px;
+  margin-top: 8px;
+  border-left: 3px solid var(--text-accent);
+}
+
+.delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* Lista dinámicas */
 .dynamic-list {
   margin-bottom: 12px;
 }
 
 .list-item {
   display: flex;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
+  gap: 8px;
+  margin-bottom: 8px;
   align-items: flex-start;
 }
 
@@ -169,100 +279,78 @@ textarea {
 
 .list-item-controls {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: 4px;
   align-items: center;
 }
 
-.list-item-controls .btn-small {
-  margin: 0;
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
-/* Botones de control de pasos */
-.step-btn {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-secondary);
-  border-radius: var(--border-radius-sm);
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.step-controls {
-  margin-left: auto;
+/* Checkboxes */
+.checkbox-label {
   display: flex;
-  gap: var(--spacing-xs);
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+  margin-bottom: 10px;
 }
 
-/* Botón de eliminar */
-.delete-btn {
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+/* Función específica */
+.function-definition {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.function-definition.active {
+  border-color: var(--text-accent);
+  box-shadow: 0 0 0 2px rgba(90, 64, 198, 0.1);
+}
+
+.function-params {
+  margin-top: 12px;
+}
+
+.param-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+/* Campos personalizados */
+.custom-field {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.custom-field .delete-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 4px;
+  right: 4px;
   background: var(--danger);
   color: white;
   border: none;
-  border-radius: var(--border-radius-sm);
+  border-radius: 4px;
   padding: 4px 8px;
   cursor: pointer;
   font-size: 12px;
 }
 
-/* Botón de copiar */
-.copy-btn {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  background: linear-gradient(135deg, var(--success), #059669);
-  color: white;
-  border: none;
-  border-radius: var(--border-radius-lg);
-  padding: 10px 16px;
-  cursor: pointer;
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  transition: var(--transition-normal);
+.custom-field .form-group {
+  margin-bottom: 8px;
 }
 
-.copy-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-}
-
-/* Botón de tema */
-.theme-toggle {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: 2px solid var(--border-secondary);
-  background: var(--bg-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  z-index: 1000;
-  box-shadow: 0 4px 12px var(--shadow-light);
-  transition: var(--transition-normal);
-}
-
-.theme-toggle:hover {
-  transform: scale(1.1);
-}
-
-/* Estados de validación */
-.invalid {
-  border-color: var(--danger) !important;
-}
-
-.valid {
-  border-color: var(--success) !important;
+.custom-field .form-group:last-child {
+  margin-bottom: 0;
 }

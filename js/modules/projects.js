@@ -1,38 +1,19 @@
-// ==========================================
-// MÓDULO DE GESTIÓN DE PROYECTOS
-// ==========================================
-
+// Gestión de proyectos para el generador de flujos IA
 const projects = {
-  // Estado del módulo
+  // Proyectos guardados con versiones
   saved: {},
   current: null,
   currentVersion: null,
 
-  // ==========================================
-  // INICIALIZACIÓN
-  // ==========================================
-  
-  // Inicializar módulo de proyectos
+  // Inicializar
   init() {
     this.load();
     this.render();
-    this.renderVersions();
-    
-    // Si hay un proyecto actual, cargarlo
-    if (this.current && this.saved[this.current]) {
-      setTimeout(() => {
-        this.loadProject(this.current);
-      }, 100);
-    }
   },
 
-  // ==========================================
-  // GESTIÓN DE PROYECTOS
-  // ==========================================
-  
-  // Guardar proyecto actual
+  // Guardar proyecto actual (ahora con versiones)
   saveProject(silent = false) {
-    const name = utils.getInputValue('project-name');
+    const name = document.getElementById('project-name').value.trim();
     if (!name) {
       if (!silent) {
         alert('Por favor, ingresa un nombre para el proyecto');
@@ -43,7 +24,7 @@ const projects = {
     // Crear timestamp para la versión
     const now = new Date();
     const timestamp = now.toISOString();
-    const displayTimestamp = utils.formatDate(now);
+    const displayTimestamp = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
 
     // Inicializar proyecto si no existe
     if (!this.saved[name]) {
@@ -57,7 +38,7 @@ const projects = {
     // Crear nueva versión
     const versionData = {
       created: timestamp,
-      data: getState.getAllData()
+      data: this.getCurrentState()
     };
 
     // Guardar versión
@@ -85,11 +66,11 @@ const projects = {
       // Nuevo proyecto vacío
       this.current = null;
       this.currentVersion = null;
-      utils.setInputValue('project-name', '');
-      setState.reset();
+      document.getElementById('project-name').value = '';
+      this.resetState();
       this.renderVersions();
-      ui.render.all();
-      prompt.update();
+      renderAll();
+      updatePrompt();
       return;
     }
 
@@ -100,7 +81,7 @@ const projects = {
     }
 
     this.current = name;
-    utils.setInputValue('project-name', name);
+    document.getElementById('project-name').value = name;
     
     // Cargar la versión más reciente por defecto
     const versions = Object.keys(project.versions);
@@ -112,10 +93,10 @@ const projects = {
     
     // Actualizar UI
     this.renderVersions();
-    ui.render.all();
-    prompt.update();
+    renderAll();
+    updatePrompt();
     
-    utils.log(`Proyecto "${name}" cargado exitosamente`);
+    console.log(`Proyecto "${name}" cargado exitosamente`);
   },
 
   // Cargar versión específica
@@ -136,11 +117,11 @@ const projects = {
     this.loadState(version.data);
     
     // Actualizar UI
-    ui.render.all();
-    prompt.update();
+    renderAll();
+    updatePrompt();
     
-    const displayTime = utils.formatDate(versionTimestamp);
-    utils.log(`Versión cargada: ${displayTime}`);
+    const displayTime = new Date(versionTimestamp).toLocaleString();
+    console.log(`Versión cargada: ${displayTime}`);
   },
 
   // Eliminar proyecto
@@ -151,30 +132,26 @@ const projects = {
     }
 
     const versionCount = Object.keys(this.saved[this.current].versions || {}).length;
-    if (utils.confirmAction(`el proyecto "${this.current}" con ${versionCount} versiones`, 'eliminar')) {
+    if (confirm(`¿Eliminar el proyecto "${this.current}" con ${versionCount} versiones?`)) {
       delete this.saved[this.current];
       this.save();
       
       // Reset to new project
       this.current = null;
       this.currentVersion = null;
-      utils.setInputValue('project-name', '');
-      setState.reset();
+      document.getElementById('project-name').value = '';
+      this.resetState();
       
       this.render();
       this.renderVersions();
-      ui.render.all();
-      prompt.update();
+      renderAll();
+      updatePrompt();
       
       alert('Proyecto eliminado exitosamente');
     }
   },
 
-  // ==========================================
-  // IMPORT/EXPORT
-  // ==========================================
-  
-  // Exportar proyecto actual
+  // Exportar proyecto
   exportProject() {
     if (!this.current || !this.saved[this.current]) {
       alert('No hay proyecto seleccionado para exportar');
@@ -182,8 +159,32 @@ const projects = {
     }
 
     const project = this.saved[this.current];
-    const data = JSON.stringify(project, null, 2);
-    utils.downloadFile(data, `${this.current}.json`);
+    
+    // Asegurar que el proyecto tenga el formato correcto antes de exportar
+    const exportData = {
+      name: project.name,
+      created: project.created,
+      modified: project.modified || new Date().toISOString(),
+      versions: project.versions || {},
+      // Metadatos adicionales para facilitar la importación
+      exportedAt: new Date().toISOString(),
+      exportVersion: '2.0'
+    };
+    
+    const data = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${this.current}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    const versionCount = Object.keys(project.versions || {}).length;
+    console.log(`Proyecto "${this.current}" exportado con ${versionCount} versiones`);
   },
 
   // Importar proyecto
@@ -192,91 +193,249 @@ const projects = {
     input.type = 'file';
     input.accept = '.json';
     
-    input.onchange = async (e) => {
+    input.onchange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
       
-      try {
-        const content = await utils.readFile(file);
-        const project = JSON.parse(content);
-        
-        // Validar estructura del proyecto
-        if (!project.name || !project.versions) {
-          throw new Error('Archivo de proyecto inválido');
-        }
-        
-        let projectName = project.name;
-        
-        // Si ya existe, preguntar si sobrescribir o renombrar
-        if (this.saved[projectName]) {
-          const action = confirm(
-            `Ya existe un proyecto llamado "${projectName}".\n\n` +
-            'OK = Sobrescribir\n' +
-            'Cancelar = Crear con nuevo nombre'
-          );
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const project = JSON.parse(e.target.result);
           
-          if (!action) {
-            // Generar nuevo nombre
-            let counter = 1;
-            while (this.saved[`${projectName} (${counter})`]) {
-              counter++;
-            }
-            projectName = `${projectName} (${counter})`;
-            project.name = projectName;
+          console.log('Estructura del archivo importado:', {
+            hasName: !!project.name,
+            hasVersions: !!project.versions,
+            hasData: !!project.data,
+            hasCreated: !!project.created,
+            keys: Object.keys(project)
+          });
+          
+          // Validar estructura del proyecto (compatible con formato nuevo y viejo)
+          if (!project.name) {
+            throw new Error('Archivo de proyecto inválido: falta el nombre del proyecto');
           }
+          
+          // Verificar si es formato nuevo (con versiones) o viejo (con data directa)
+          const isNewFormat = project.versions && typeof project.versions === 'object';
+          const isOldFormat = project.data && typeof project.data === 'object';
+          
+          console.log('Formato detectado:', { isNewFormat, isOldFormat });
+          
+          if (!isNewFormat && !isOldFormat) {
+            throw new Error('Archivo de proyecto inválido: no se encontraron datos del proyecto ni versiones');
+          }
+          
+          // Convertir formato viejo al nuevo si es necesario
+          let projectToSave = project;
+          if (isOldFormat && !isNewFormat) {
+            console.log('Convirtiendo proyecto del formato anterior al nuevo...');
+            const timestamp = project.modified || project.created || new Date().toISOString();
+            projectToSave = {
+              name: project.name,
+              created: project.created || timestamp,
+              modified: timestamp,
+              versions: {
+                [timestamp]: {
+                  created: timestamp,
+                  data: project.data
+                }
+              }
+            };
+          }
+          
+          let projectName = projectToSave.name;
+          
+          // Si ya existe, preguntar si sobrescribir o renombrar
+          if (this.saved[projectName]) {
+            const action = confirm(
+              `Ya existe un proyecto llamado "${projectName}".\n\n` +
+              'OK = Sobrescribir\n' +
+              'Cancelar = Crear con nuevo nombre'
+            );
+            
+            if (!action) {
+              // Generar nuevo nombre
+              let counter = 1;
+              while (this.saved[`${projectName} (${counter})`]) {
+                counter++;
+              }
+              projectName = `${projectName} (${counter})`;
+              project.name = projectName;
+            }
+          }
+          
+          // Guardar proyecto
+          this.saved[projectName] = {
+            ...projectToSave,
+            name: projectName, // Asegurar que el nombre esté actualizado
+            modified: new Date().toISOString()
+          };
+          
+          this.save();
+          this.render();
+          
+          // Cargar el proyecto importado
+          this.loadProject(projectName);
+          
+          const versionCount = Object.keys(projectToSave.versions || {}).length;
+          alert(`Proyecto "${projectName}" importado exitosamente\n${versionCount} versiones disponibles`);
+          
+        } catch (error) {
+          console.error('Error detallado:', error);
+          alert('Error al importar proyecto:\n' + error.message + '\n\nVerifica que el archivo sea un proyecto válido exportado desde esta aplicación.');
         }
-        
-        // Guardar proyecto
-        this.saved[projectName] = {
-          ...project,
-          modified: utils.now()
-        };
-        
-        this.save();
-        this.render();
-        
-        // Cargar el proyecto importado
-        this.loadProject(projectName);
-        
-        alert(`Proyecto "${projectName}" importado exitosamente`);
-        
-      } catch (error) {
-        utils.error('Error al importar proyecto:', error);
-        alert('Error al importar proyecto: ' + error.message);
-      }
+      };
+      reader.readAsText(file);
     };
     
     input.click();
   },
 
-  // ==========================================
-  // GESTIÓN DE ESTADO
-  // ==========================================
-  
+  // Obtener estado actual de la aplicación
+  getCurrentState() {
+    return {
+      businessName: document.getElementById('business-name')?.value || '',
+      sections: state.sections,
+      faqs: state.faqs,
+      flows: state.flows,
+      currentFlow: state.currentFlow,
+      currentSection: state.currentSection,
+      // IMPORTANTE: Incluir las funciones en el estado del proyecto
+      functions: functions.getAll()
+    };
+  },
+
   // Cargar estado en la aplicación
   loadState(data) {
-    // Usar setState para cargar los datos
-    setState.setAllData(data);
-    
-    // Migrar datos antiguos si es necesario
-    this.migrateLegacyData(data);
-  },
-
-  // Migrar datos del formato anterior
-  migrateLegacyData(data) {
-    // Delegar la migración al módulo de secciones
-    if (sections.migrateLegacyData) {
-      sections.migrateLegacyData(data);
+    // Cargar campo del negocio
+    if (data.businessName !== undefined) {
+      document.getElementById('business-name').value = data.businessName;
     }
+    
+    // Cargar datos del estado
+    if (data.sections) state.sections = data.sections;
+    if (data.faqs) state.faqs = data.faqs;
+    if (data.flows) state.flows = data.flows;
+    if (data.currentFlow !== undefined) state.currentFlow = data.currentFlow;
+    if (data.currentSection !== undefined) state.currentSection = data.currentSection;
+    
+    // IMPORTANTE: Cargar las funciones del proyecto
+    if (data.functions) {
+      functions.available = data.functions;
+      functions.save();
+      functions.render();
+    }
+
+    // Migrar datos del formato anterior si existen
+    this.migrateOldConfigData(data);
   },
 
-  // ==========================================
-  // RENDERIZADO
-  // ==========================================
-  
+  // Migrar configuración del formato anterior al nuevo
+  migrateOldConfigData(data) {
+    // Si existen datos del formato anterior, migrarlos
+    if (data.tone || data.format || data.rules) {
+      console.log('Migrando configuración al nuevo formato...');
+      
+      // Encontrar o crear sección de "Instrucciones Generales"
+      let generalSection = state.sections.find(s => s.name === "Instrucciones Generales");
+      if (!generalSection) {
+        generalSection = { name: "Instrucciones Generales", fields: [] };
+        state.sections.unshift(generalSection);
+      }
+      
+      // Migrar tono y formato al nuevo formato (como items en lugar de value)
+      if (data.tone && !generalSection.fields.find(f => f.label === "Tono")) {
+        generalSection.fields.push({ type: "text", label: "Tono", items: [data.tone] });
+      }
+      if (data.format && !generalSection.fields.find(f => f.label === "Formato")) {
+        generalSection.fields.push({ type: "text", label: "Formato", items: [data.format] });
+      }
+      
+      // Migrar reglas
+      if (data.rules && data.rules.length > 0) {
+        let rulesSection = state.sections.find(s => s.name === "Reglas de comportamiento");
+        if (!rulesSection) {
+          rulesSection = { name: "Reglas de comportamiento", fields: [] };
+          state.sections.push(rulesSection);
+        }
+        
+        // Solo migrar si no existe ya una lista de reglas
+        if (!rulesSection.fields.find(f => f.type === "list" && f.label === "Reglas")) {
+          rulesSection.fields.push({
+            type: "list",
+            label: "Reglas",
+            items: data.rules
+          });
+        }
+      }
+    }
+
+    // Migrar campos de texto del formato anterior (value) al nuevo (items)
+    state.sections.forEach(section => {
+      section.fields.forEach(field => {
+        if (field.type === 'text' && field.value && !field.items) {
+          // Convertir de formato anterior (value) a nuevo (items)
+          field.items = [field.value];
+          delete field.value;
+        }
+      });
+    });
+  },
+
+  // Resetear estado a valores por defecto
+  resetState() {
+    // Limpiar formulario
+    document.getElementById('business-name').value = '';
+    
+    // Resetear secciones a valores por defecto
+    state.sections = [
+      {
+        name: "Instrucciones Generales",
+        fields: [
+          { type: "text", label: "Configuración", items: ["Profesional, cordial y claro", "Respuestas breves, máximo 3 renglones"] },
+          { type: "textarea", label: "Contexto", value: "Actúa como encargado de tomar pedidos por WhatsApp" }
+        ]
+      },
+      {
+        name: "Reglas de comportamiento", 
+        fields: [
+          { 
+            type: "list", 
+            label: "Reglas", 
+            items: [
+              "Pregunta una cosa a la vez",
+              "Envía los enlaces sin formato", 
+              "No proporciones información fuera de este documento"
+            ]
+          }
+        ]
+      }
+    ];
+    
+    state.faqs = [
+      { question: "¿Cuáles son los horarios de atención?", answer: "Atendemos de lunes a domingo de 8:00 AM a 10:00 PM" },
+      { question: "¿Hacen delivery?", answer: "Sí, hacemos delivery en un radio de 5km" }
+    ];
+    
+    state.flows = [{
+      name: "Flujo Principal",
+      steps: [
+        { text: "Saluda al cliente y pregúntale si desea retirar en tienda o envío a domicilio", functions: [] },
+        { text: "Solicita el pedido (productos y cantidades) y, si aplica, la dirección para envío.", functions: [] }
+      ]
+    }];
+    
+    state.currentFlow = 0;
+    state.currentSection = 0;
+    state.currentTab = 0;
+    
+    // IMPORTANTE: Resetear funciones a las predeterminadas
+    functions.loadDefaults();
+  },
+
   // Renderizar selector de proyectos
   render() {
-    const selector = utils.getElement('project-selector');
+    const selector = document.getElementById('project-selector');
     if (!selector) return;
 
     selector.innerHTML = '<option value="">Nuevo proyecto...</option>';
@@ -301,7 +460,7 @@ const projects = {
 
   // Renderizar selector de versiones
   renderVersions() {
-    const selector = utils.getElement('version-selector');
+    const selector = document.getElementById('version-selector');
     if (!selector) return;
 
     selector.innerHTML = '<option value="">Seleccionar versión...</option>';
@@ -314,18 +473,24 @@ const projects = {
     const versions = Object.keys(project.versions || {}).sort().reverse(); // Más recientes primero
     
     versions.forEach(timestamp => {
+      const version = project.versions[timestamp];
+      const date = new Date(timestamp);
       const option = document.createElement('option');
       option.value = timestamp;
-      option.textContent = utils.formatDate(timestamp);
+      option.textContent = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
       option.selected = timestamp === this.currentVersion;
       selector.appendChild(option);
     });
   },
 
-  // ==========================================
-  // BACKUP Y RESTAURACIÓN
-  // ==========================================
-  
+  // Obtener lista de proyectos
+  getProjectsList() {
+    return Object.keys(this.saved).map(name => ({
+      name,
+      ...this.saved[name]
+    }));
+  },
+
   // Exportar todos los proyectos
   exportAll() {
     if (Object.keys(this.saved).length === 0) {
@@ -334,14 +499,22 @@ const projects = {
     }
 
     const backup = {
-      exported: utils.now(),
+      exported: new Date().toISOString(),
       version: '1.0',
       projects: this.saved
     };
 
     const data = JSON.stringify(backup, null, 2);
-    const filename = `backup-proyectos-${new Date().toISOString().slice(0,10)}.json`;
-    utils.downloadFile(data, filename);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup-proyectos-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
     alert(`Backup creado con ${Object.keys(this.saved).length} proyectos`);
   },
@@ -352,82 +525,87 @@ const projects = {
     input.type = 'file';
     input.accept = '.json';
     
-    input.onchange = async (e) => {
+    input.onchange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
       
-      try {
-        const content = await utils.readFile(file);
-        const backup = JSON.parse(content);
-        
-        if (!backup.projects) {
-          throw new Error('Archivo de backup inválido');
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const backup = JSON.parse(e.target.result);
+          
+          if (!backup.projects) {
+            throw new Error('Archivo de backup inválido');
+          }
+          
+          const action = confirm(
+            `Se encontraron ${Object.keys(backup.projects).length} proyectos.\n\n` +
+            'OK = Sobrescribir todos\n' +
+            'Cancelar = Fusionar (mantener existentes)'
+          );
+          
+          if (action) {
+            this.saved = backup.projects;
+          } else {
+            Object.assign(this.saved, backup.projects);
+          }
+          
+          this.save();
+          this.render();
+          
+          alert(`Importados ${Object.keys(backup.projects).length} proyectos exitosamente`);
+          
+        } catch (error) {
+          alert('Error al importar backup: ' + error.message);
         }
-        
-        const action = confirm(
-          `Se encontraron ${Object.keys(backup.projects).length} proyectos.\n\n` +
-          'OK = Sobrescribir todos\n' +
-          'Cancelar = Fusionar (mantener existentes)'
-        );
-        
-        if (action) {
-          this.saved = backup.projects;
-        } else {
-          Object.assign(this.saved, backup.projects);
-        }
-        
-        this.save();
-        this.render();
-        
-        alert(`Importados ${Object.keys(backup.projects).length} proyectos exitosamente`);
-        
-      } catch (error) {
-        utils.error('Error al importar backup:', error);
-        alert('Error al importar backup: ' + error.message);
-      }
+      };
+      reader.readAsText(file);
     };
     
     input.click();
   },
 
-  // ==========================================
-  // PERSISTENCIA
-  // ==========================================
-  
   // Guardar en localStorage
   save() {
-    const success = utils.saveToStorage('projects', this.saved) &&
-                   utils.saveToStorage('currentProject', this.current || '') &&
-                   utils.saveToStorage('currentVersion', this.currentVersion || '');
-    
-    if (!success) {
-      utils.error('Error guardando proyectos en localStorage');
-    }
-    
-    return success;
+    localStorage.setItem('projects', JSON.stringify(this.saved));
+    localStorage.setItem('currentProject', this.current || '');
+    localStorage.setItem('currentVersion', this.currentVersion || '');
   },
 
   // Cargar desde localStorage
   load() {
-    this.saved = utils.loadFromStorage('projects', {});
-    this.current = utils.loadFromStorage('currentProject', null);
-    this.currentVersion = utils.loadFromStorage('currentVersion', null);
+    const saved = localStorage.getItem('projects');
+    if (saved) {
+      try {
+        this.saved = JSON.parse(saved);
+        // Migrar proyectos antiguos al nuevo formato
+        this.migrateOldProjects();
+      } catch (e) {
+        console.error('Error loading projects:', e);
+        this.saved = {};
+      }
+    }
     
-    // Migrar proyectos antiguos al nuevo formato
-    this.migrateOldProjects();
+    this.current = localStorage.getItem('currentProject') || null;
+    this.currentVersion = localStorage.getItem('currentVersion') || null;
+    
+    // Si hay un proyecto actual, cargarlo
+    if (this.current && this.saved[this.current]) {
+      setTimeout(() => {
+        this.loadProject(this.current);
+      }, 100);
+    }
   },
 
   // Migrar proyectos del formato anterior al nuevo con versiones
   migrateOldProjects() {
-    let migrated = false;
-    
     Object.keys(this.saved).forEach(projectName => {
       const project = this.saved[projectName];
       
       // Si el proyecto no tiene el formato nuevo, migrarlo
       if (project.data && !project.versions) {
         const oldData = project.data;
-        const timestamp = project.modified || project.created || utils.now();
+        const timestamp = project.modified || project.created || new Date().toISOString();
         
         this.saved[projectName] = {
           name: projectName,
@@ -441,41 +619,8 @@ const projects = {
           }
         };
         
-        migrated = true;
-        utils.log(`Migrado proyecto: ${projectName}`);
+        console.log(`Migrado proyecto: ${projectName}`);
       }
     });
-    
-    if (migrated) {
-      this.save();
-    }
-  },
-
-  // ==========================================
-  // UTILIDADES
-  // ==========================================
-  
-  // Obtener lista de proyectos
-  getProjectsList() {
-    return Object.keys(this.saved).map(name => ({
-      name,
-      ...this.saved[name]
-    }));
-  },
-
-  // Obtener estadísticas de proyectos
-  getStats() {
-    const totalProjects = Object.keys(this.saved).length;
-    const totalVersions = Object.values(this.saved).reduce(
-      (total, project) => total + Object.keys(project.versions || {}).length, 0
-    );
-    
-    return {
-      totalProjects,
-      totalVersions,
-      averageVersionsPerProject: totalProjects > 0 ? (totalVersions / totalProjects).toFixed(1) : 0,
-      currentProject: this.current,
-      currentVersion: this.currentVersion
-    };
   }
 };

@@ -2,16 +2,11 @@
 <html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generador de Flujo Conversacional IA</title>
-  
-  <!-- CSS Modular -->
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/themes.css">
-  
-  <!-- Widget externo -->
   <script defer src="https://widget.tochat.be/bundle.js?key=d6f03efb-00ec-4df4-a054-95cbc04019b8"></script>
 </head>
 <body>
@@ -53,10 +48,10 @@
       
       <!-- Pestañas -->
       <div class="tabs">
-        <button class="tab active" onclick="ui.showTab(0)">⚙️ Config</button>
-        <button class="tab" onclick="ui.showTab(1)">🔄 Flujos</button>
-        <button class="tab" onclick="ui.showTab(2)">❓ FAQ</button>
-        <button class="tab" onclick="ui.showTab(3)">⚡ Funciones</button>
+        <button class="tab active" onclick="showTab(0)">⚙️ Config</button>
+        <button class="tab" onclick="showTab(1)">🔄 Flujos</button>
+        <button class="tab" onclick="showTab(2)">❓ FAQ</button>
+        <button class="tab" onclick="showTab(3)">⚡ Funciones</button>
       </div>
 
       <!-- Configuración Básica -->
@@ -65,7 +60,7 @@
           <h3>🏪 Información del Negocio</h3>
           <div class="form-group">
             <label>Nombre del Negocio:</label>
-            <input type="text" id="business-name" placeholder="Ej. Empanadas & Bebidas" oninput="prompt.update()">
+            <input type="text" id="business-name" placeholder="Ej. Empanadas & Bebidas" oninput="updatePrompt()">
           </div>
         </div>
 
@@ -74,16 +69,16 @@
           <div class="form-row">
             <div class="form-group">
               <label>Sección actual:</label>
-              <select id="section-selector" onchange="sections.change()"></select>
+              <select id="section-selector" onchange="changeSection()"></select>
             </div>
             <div class="form-group">
               <label>Nombre:</label>
-              <input type="text" id="section-name" oninput="sections.rename()">
+              <input type="text" id="section-name" oninput="renameSection()">
             </div>
           </div>
           <div class="form-row">
-            <button type="button" class="btn-small" onclick="sections.add()">➕ Nueva Sección</button>
-            <button type="button" class="btn-small btn-danger" onclick="sections.delete()">🗑️ Eliminar</button>
+            <button type="button" class="btn-small" onclick="addSection()">➕ Nueva Sección</button>
+            <button type="button" class="btn-small btn-danger" onclick="deleteSection()">🗑️ Eliminar</button>
           </div>
         </div>
 
@@ -91,9 +86,9 @@
           <h3>Contenido de la Sección:</h3>
           <div id="section-content-container"></div>
           <div class="form-row">
-            <button type="button" class="btn-small" onclick="sections.addTextField()">➕ Campo de Texto</button>
-            <button type="button" class="btn-small" onclick="sections.addTextAreaField()">➕ Área de Texto</button>
-            <button type="button" class="btn-small" onclick="sections.addListField()">➕ Lista</button>
+            <button type="button" class="btn-small" onclick="addTextField()">➕ Campo de Texto</button>
+            <button type="button" class="btn-small" onclick="addTextAreaField()">➕ Área de Texto</button>
+            <button type="button" class="btn-small" onclick="addListField()">➕ Lista</button>
           </div>
         </div>
       </div>
@@ -105,23 +100,23 @@
           <div class="form-row">
             <div class="form-group">
               <label>Flujo actual:</label>
-              <select id="flow-selector" onchange="flows.change()"></select>
+              <select id="flow-selector" onchange="changeFlow()"></select>
             </div>
             <div class="form-group">
               <label>Nombre:</label>
-              <input type="text" id="flow-name" oninput="flows.rename()">
+              <input type="text" id="flow-name" oninput="renameFlow()">
             </div>
           </div>
           <div class="form-row">
-            <button type="button" class="btn-small" onclick="flows.add()">➕ Nuevo Flujo</button>
-            <button type="button" class="btn-small btn-danger" onclick="flows.delete()">🗑️ Eliminar</button>
+            <button type="button" class="btn-small" onclick="addFlow()">➕ Nuevo Flujo</button>
+            <button type="button" class="btn-small btn-danger" onclick="deleteFlow()">🗑️ Eliminar</button>
           </div>
         </div>
 
         <div>
           <h3>Pasos del Flujo:</h3>
           <div id="steps-container"></div>
-          <button type="button" onclick="flows.addStep()">➕ Agregar Paso</button>
+          <button type="button" onclick="addStep()">➕ Agregar Paso</button>
         </div>
       </div>
 
@@ -130,7 +125,7 @@
         <div class="section">
           <h3>❓ Preguntas Frecuentes</h3>
           <div id="faq-container" class="dynamic-list"></div>
-          <button type="button" class="btn-small" onclick="faqs.add()">➕ Agregar FAQ</button>
+          <button type="button" class="btn-small" onclick="addFAQ()">➕ Agregar FAQ</button>
         </div>
       </div>
 
@@ -139,7 +134,7 @@
         <div class="section">
           <h3>⚡ Funciones Disponibles</h3>
           <div id="functions-list"></div>
-          <button type="button" class="btn-small" onclick="functions.add()">➕ Nueva Función</button>
+          <button type="button" class="btn-small" onclick="functions.addFunction()">➕ Nueva Función</button>
           <button type="button" class="btn-small" onclick="functions.loadDefaults()">🔄 Cargar Predeterminadas</button>
         </div>
       </div>
@@ -147,7 +142,7 @@
 
     <!-- Panel de salida -->
     <div class="panel output">
-      <button class="copy-btn" onclick="utils.copyPrompt(event)">
+      <button class="copy-btn" onclick="copyPrompt(event)">
         <span>📋</span>
         <span>Copiar</span>
       </button>
@@ -155,26 +150,23 @@
     </div>
   </div>
 
-  <!-- JavaScript Modular -->
-  <!-- Core -->
+  <!-- Scripts Core -->
   <script src="js/core/state.js"></script>
   <script src="js/core/utils.js"></script>
   <script src="js/core/events.js"></script>
   
-  <!-- Modules -->
+  <!-- Scripts Modules -->
+  <script src="js/modules/functions.js"></script>
   <script src="js/modules/projects.js"></script>
   <script src="js/modules/sections.js"></script>
   <script src="js/modules/flows.js"></script>
   <script src="js/modules/faqs.js"></script>
-  <script src="js/modules/functions.js"></script>
-  <script src="js/modules/prompt.js"></script>
+  <script src="js/modules/prompts.js"></script>
+  <script src="js/modules/step-functions.js"></script>
   
-  <!-- UI -->
+  <!-- Scripts UI -->
+  <script src="js/ui/keyboard.js"></script>
   <script src="js/ui/render.js"></script>
   <script src="js/ui/themes.js"></script>
-  <script src="js/ui/keyboard.js"></script>
-  
-  <!-- Config -->
-  <script src="config/defaults.js"></script>
 </body>
 </html>

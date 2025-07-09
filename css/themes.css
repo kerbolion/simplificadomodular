@@ -1,8 +1,32 @@
-/* ==========================================
-   CSS THEMES - Modo claro/oscuro
-   ========================================== */
+/* Variables de tema y colores */
 
-/* Tema oscuro */
+:root {
+  --bg-primary: #f6f8fa;
+  --bg-secondary: #fff;
+  --bg-tertiary: #f8fafe;
+  --border-primary: #e4dbfa;
+  --border-secondary: #dad2ee;
+  --text-primary: #292340;
+  --text-secondary: #3d3663;
+  --text-accent: #5a40c6;
+  --input-bg: #fafaff;
+  --shadow-light: #decaf820;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  
+  /* Colores para el output - TEMA CLARO */
+  --output-bg: #fafafa;
+  --output-text: #2d3748;
+  --color-title: #2563eb;
+  --color-section: #059669;
+  --color-function: #d97706;
+  --color-number: #7c3aed;
+  --color-keyword: #db2777;
+  --color-string: #dc2626;
+  --color-comment: #6b7280;
+}
+
 [data-theme="dark"] {
   --bg-primary: #1e1e1e;
   --bg-secondary: #252526;
@@ -15,125 +39,79 @@
   --input-bg: #3c3c3c;
   --shadow-light: #00000020;
   
-  /* Mantener colores del output consistentes en modo oscuro */
+  /* Colores para el output - TEMA OSCURO */
   --output-bg: #1e1e1e;
   --output-text: #d4d4d4;
+  --color-title: #569cd6;
+  --color-section: #4ec9b0;
+  --color-function: #dcdcaa;
+  --color-number: #b5cea8;
+  --color-keyword: #c586c0;
+  --color-string: #ce9178;
+  --color-comment: #6a9955;
 }
 
-/* Iconos del botón de tema */
-[data-theme="light"] .theme-toggle::before { 
-  content: "🌙"; 
-}
+/* ==========================================
+   COLORES PARA EL OUTPUT (PANEL DERECHO)
+   ========================================== */
 
-[data-theme="dark"] .theme-toggle::before { 
-  content: "☀️"; 
-}
-
-/* Colores específicos para el output del prompt */
+/* Títulos principales (Prompt para Asistente IA) */
 .output-title {
   color: var(--color-title);
   font-weight: bold;
+  transition: color 0.3s ease;
 }
 
+/* Secciones principales (**Texto**) */
 .output-section {
   color: var(--color-section);
   font-weight: bold;
+  transition: color 0.3s ease;
 }
 
+/* Números de pasos */
 .output-step-number {
   color: var(--color-number);
   font-weight: bold;
+  transition: color 0.3s ease;
 }
 
+/* Funciones ejecutadas */
 .output-function {
   color: var(--color-function);
   font-style: italic;
+  transition: color 0.3s ease;
 }
 
+/* Palabras clave */
 .output-keyword {
   color: var(--color-keyword);
+  transition: color 0.3s ease;
 }
 
+/* Strings/texto entre comillas */
 .output-string {
   color: var(--color-string);
+  transition: color 0.3s ease;
 }
 
+/* Comentarios */
 .output-comment {
   color: var(--color-comment);
   font-style: italic;
+  transition: color 0.3s ease;
 }
 
+/* Preguntas en FAQ */
 .output-question {
   color: var(--color-title);
   font-weight: bold;
+  transition: color 0.3s ease;
 }
 
+/* Respuestas en FAQ */
 .output-answer {
   color: var(--output-text);
   margin-left: 20px;
-}
-
-/* Transiciones suaves para cambio de tema */
-* {
-  transition: 
-    background-color var(--transition-normal),
-    border-color var(--transition-normal),
-    color var(--transition-normal);
-}
-
-/* Evitar transición en elementos específicos */
-.copy-btn,
-.theme-toggle,
-button:hover {
-  transition: 
-    background-color var(--transition-fast),
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-
-/* Mejoras visuales específicas para modo oscuro */
-[data-theme="dark"] .step-number {
-  background: linear-gradient(90deg, #4a4a4a, #6a6a6a);
-  color: #e0e0e0;
-}
-
-[data-theme="dark"] .projects-section {
-  border-color: var(--text-accent);
-  background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
-}
-
-[data-theme="dark"] .btn-small {
-  background: #3d3d3d;
-  color: #cccccc;
-}
-
-/* Scrollbar para modo oscuro */
-[data-theme="dark"] ::-webkit-scrollbar-track {
-  background: var(--bg-tertiary);
-}
-
-[data-theme="dark"] ::-webkit-scrollbar-thumb {
-  background: var(--border-secondary);
-}
-
-[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-accent);
-}
-
-/* Hover states específicos para modo oscuro */
-[data-theme="dark"] button:hover {
-  filter: brightness(1.2);
-}
-
-[data-theme="dark"] .tab:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Mejoras de contraste para modo oscuro */
-[data-theme="dark"] .function-definition.active {
-  box-shadow: 0 0 0 2px rgba(86, 156, 214, 0.3);
-}
-
-[data-theme="dark"] .copy-btn:hover {
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+  transition: color 0.3s ease;
 }
