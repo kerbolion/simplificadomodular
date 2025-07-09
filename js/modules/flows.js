@@ -1,4 +1,42 @@
-// ==========================================
+function renderFlowControls() {
+  const container = document.getElementById('flow-controls');
+  if (!container) return;
+  
+  let controlsHTML = `
+    <button type="button" class="btn-small" onclick="addFlow()">➕ Nuevo Flujo</button>
+    <button type="button" class="btn-small btn-danger" onclick="deleteFlow()">🗑️ Eliminar</button>
+  `;
+  
+  // Agregar botones de reorganización si hay más de un flujo
+  if (state.flows.length > 1) {
+    if (state.currentFlow > 0) {
+      controlsHTML += `<button type="button" class="btn-small" onclick="moveFlow(-1)">⬆️ Subir</button>`;
+    }
+    if (state.currentFlow < state.flows.length - 1) {
+      controlsHTML += `<button type="button" class="btn-small" onclick="moveFlow(1)">⬇️ Bajar</button>`;
+    }
+  }
+  
+  container.innerHTML = controlsHTML;
+}function moveFlow(direction) {
+  const flows = state.flows;
+  const currentIndex = state.currentFlow;
+  const newIndex = currentIndex + direction;
+  
+  if (newIndex >= 0 && newIndex < flows.length) {
+    // Intercambiar flujos
+    [flows[currentIndex], flows[newIndex]] = [flows[newIndex], flows[currentIndex]];
+    
+    // Actualizar índice actual
+    state.currentFlow = newIndex;
+    
+    // Re-renderizar
+    renderFlows();
+    renderSteps();
+    updatePrompt();
+    scheduleAutoSave();
+  }
+}// ==========================================
 // GESTIÓN DE FLUJOS
 // ==========================================
 function addFlow() {
@@ -35,6 +73,7 @@ function deleteFlow() {
 function changeFlow() {
   state.currentFlow = parseInt(document.getElementById('flow-selector').value);
   renderSteps();
+  renderFlowControls(); // Actualizar botones de reorganización
   document.getElementById('flow-name').value = state.flows[state.currentFlow].name;
 }
 
@@ -57,6 +96,9 @@ function renderFlows() {
   if (document.getElementById('flow-name')) {
     document.getElementById('flow-name').value = state.flows[state.currentFlow].name;
   }
+  
+  // Renderizar controles de reorganización
+  renderFlowControls();
 }
 
 // ==========================================

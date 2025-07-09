@@ -1,4 +1,42 @@
-// ==========================================
+function renderSectionControls() {
+  const container = document.getElementById('section-controls');
+  if (!container) return;
+  
+  let controlsHTML = `
+    <button type="button" class="btn-small" onclick="addSection()">➕ Nueva Sección</button>
+    <button type="button" class="btn-small btn-danger" onclick="deleteSection()">🗑️ Eliminar</button>
+  `;
+  
+  // Agregar botones de reorganización si hay más de una sección
+  if (state.sections.length > 1) {
+    if (state.currentSection > 0) {
+      controlsHTML += `<button type="button" class="btn-small" onclick="moveSection(-1)">⬆️ Subir</button>`;
+    }
+    if (state.currentSection < state.sections.length - 1) {
+      controlsHTML += `<button type="button" class="btn-small" onclick="moveSection(1)">⬇️ Bajar</button>`;
+    }
+  }
+  
+  container.innerHTML = controlsHTML;
+}function moveSection(direction) {
+  const sections = state.sections;
+  const currentIndex = state.currentSection;
+  const newIndex = currentIndex + direction;
+  
+  if (newIndex >= 0 && newIndex < sections.length) {
+    // Intercambiar secciones
+    [sections[currentIndex], sections[newIndex]] = [sections[newIndex], sections[currentIndex]];
+    
+    // Actualizar índice actual
+    state.currentSection = newIndex;
+    
+    // Re-renderizar
+    renderSections();
+    renderSectionContent();
+    updatePrompt();
+    scheduleAutoSave();
+  }
+}// ==========================================
 // GESTIÓN DE PESTAÑAS
 // ==========================================
 function showTab(index) {
@@ -48,6 +86,7 @@ function deleteSection() {
 function changeSection() {
   state.currentSection = parseInt(document.getElementById('section-selector').value);
   renderSectionContent();
+  renderSectionControls(); // Actualizar botones de reorganización
   document.getElementById('section-name').value = state.sections[state.currentSection].name;
 }
 
@@ -70,6 +109,9 @@ function renderSections() {
   if (document.getElementById('section-name')) {
     document.getElementById('section-name').value = state.sections[state.currentSection].name;
   }
+  
+  // Renderizar controles de reorganización
+  renderSectionControls();
 }
 
 // ==========================================
