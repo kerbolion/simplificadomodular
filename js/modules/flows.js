@@ -18,7 +18,9 @@ function renderFlowControls() {
   }
   
   container.innerHTML = controlsHTML;
-}function moveFlow(direction) {
+}
+
+function moveFlow(direction) {
   const flows = state.flows;
   const currentIndex = state.currentFlow;
   const newIndex = currentIndex + direction;
@@ -36,7 +38,9 @@ function renderFlowControls() {
     updatePrompt();
     scheduleAutoSave();
   }
-}// ==========================================
+}
+
+// ==========================================
 // GESTIÓN DE FLUJOS
 // ==========================================
 function addFlow() {
@@ -111,6 +115,19 @@ function addStep() {
   scheduleAutoSave();
 }
 
+function duplicateStep(index) {
+  const stepToDuplicate = state.flows[state.currentFlow].steps[index];
+  // Crear una copia profunda del paso
+  const duplicatedStep = JSON.parse(JSON.stringify(stepToDuplicate));
+  
+  // Insertar el paso duplicado después del actual
+  state.flows[state.currentFlow].steps.splice(index + 1, 0, duplicatedStep);
+  
+  renderSteps();
+  updatePrompt();
+  scheduleAutoSave();
+}
+
 function removeStep(index) {
   if (confirm("¿Eliminar este paso?")) {
     state.flows[state.currentFlow].steps.splice(index, 1);
@@ -151,6 +168,7 @@ function renderSteps() {
       <div class="step-header">
         <span class="step-number">Paso ${index + 1}</span>
         <div class="step-controls">
+          <button class="step-btn" onclick="duplicateStep(${index})" title="Duplicar">📄</button>
           ${index > 0 ? `<button class="step-btn" onclick="moveStep(${index}, -1)" title="Subir">↑</button>` : ''}
           ${index < currentFlow.steps.length - 1 ? `<button class="step-btn" onclick="moveStep(${index}, 1)" title="Bajar">↓</button>` : ''}
           <button class="step-btn btn-danger" onclick="removeStep(${index})" title="Eliminar">×</button>

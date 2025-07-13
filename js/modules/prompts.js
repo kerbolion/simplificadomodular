@@ -12,6 +12,11 @@ function updatePrompt() {
   // Secciones dinámicas
   state.sections.forEach(section => {
     const validFields = section.fields.filter(field => {
+      // Validar encabezados H1, H2, H3
+      if (field.type === 'h1' || field.type === 'h2' || field.type === 'h3') {
+        return field.value && field.value.trim();
+      }
+      // Validar otros tipos de campos
       if (field.type === 'text') return field.items && field.items.some(item => item.trim());
       if (field.type === 'textarea') return field.value && field.value.trim();
       if (field.type === 'list') return field.items && field.items.some(item => item.trim());
@@ -19,10 +24,17 @@ function updatePrompt() {
     });
     
     if (validFields.length > 0) {
-      html += `<span class="output-section">**${section.name}:**</span>\n`;
+      html += `<span class="output-section">${section.name}:</span>\n`;
       
       validFields.forEach(field => {
-        if (field.type === 'text') {
+        // Renderizar encabezados H1, H2, H3
+        if (field.type === 'h1') {
+          html += `<span class="output-h1">${field.value}</span>\n`;
+        } else if (field.type === 'h2') {
+          html += `<span class="output-h2">${field.value}</span>\n`;
+        } else if (field.type === 'h3') {
+          html += `<span class="output-h3">${field.value}</span>\n`;
+        } else if (field.type === 'text') {
           const validItems = field.items.filter(item => item.trim());
           if (validItems.length > 0) {
             validItems.forEach((item) => {
@@ -46,8 +58,8 @@ function updatePrompt() {
 
   // Flujos
   state.flows.forEach((flow, flowIndex) => {
-    const title = state.flows.length === 1 ? "**Flujo principal:**" : `**${flow.name}:**`;
-    html += `<span class="output-section">${title}</span>\n\n`;
+    const title = state.flows.length === 1 ? "Flujo principal:" : `${flow.name}:`;
+    html += `<span class="output-section">${title}</span>\n`;
     
     flow.steps.forEach((step, stepIndex) => {
       html += `<span class="output-step-number">${stepIndex + 1}.</span> ${step.text}`;
@@ -89,16 +101,16 @@ function updatePrompt() {
           }
         });
       }
-      html += '\n\n';
+      html += '\n';
     });
   });
 
   // Preguntas frecuentes (movidas al final)
   const validFaqs = state.faqs.filter(f => f.question.trim()); // Solo verificar que la pregunta tenga contenido
   if (validFaqs.length > 0) {
-    html += `<span class="output-section">**Preguntas Frecuentes:**</span>\n`;
+    html += `<span class="output-section">Preguntas Frecuentes:</span>\n`;
     validFaqs.forEach(faq => {
-      html += `- <span class="output-question">**${faq.question}**</span>\n`;
+      html += `- <span class="output-question">${faq.question}</span>\n`;
       if (faq.answer.trim()) {
         html += `  <span class="output-answer">${faq.answer}</span>\n`;
       }

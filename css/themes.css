@@ -25,6 +25,14 @@
   --color-keyword: #db2777;
   --color-string: #dc2626;
   --color-comment: #6b7280;
+
+  /* Colores específicos para tipos de encabezados */
+  --color-h1: #2563eb;
+  --color-h2: #7c3aed;
+  --color-h3: #059669;
+  --color-text: #6b7280;
+  --color-textarea: #6b7280;
+  --color-list: #6b7280;
 }
 
 [data-theme="dark"] {
@@ -49,6 +57,14 @@
   --color-keyword: #c586c0;
   --color-string: #ce9178;
   --color-comment: #6a9955;
+
+  /* Colores específicos para tipos de encabezados - TEMA OSCURO */
+  --color-h1: #569cd6;
+  --color-h2: #c586c0;
+  --color-h3: #4ec9b0;
+  --color-text: #808080;
+  --color-textarea: #808080;
+  --color-list: #808080;
 }
 
 /* ==========================================
@@ -114,4 +130,85 @@
   color: var(--output-text);
   margin-left: 20px;
   transition: color 0.3s ease;
+}
+
+/* ==========================================
+   COLORES PARA ENCABEZADOS EN OUTPUT
+   ========================================== */
+
+/* Encabezados H1 en el output */
+.output-h1 {
+  color: var(--color-h1) !important;
+  font-weight: bold !important;
+  font-size: 1.2em !important;
+  transition: color 0.3s ease;
+  display: inline;
+  margin: 0;
+}
+
+/* Encabezados H2 en el output */
+.output-h2 {
+  color: var(--color-h2) !important;
+  font-weight: bold !important;
+  font-size: 1.1em !important;
+  transition: color 0.3s ease;
+  display: inline;
+  margin: 0;
+}
+
+/* Encabezados H3 en el output */
+.output-h3 {
+  color: var(--color-h3) !important;
+  font-weight: bold !important;
+  font-size: 1.05em !important;
+  transition: color 0.3s ease;
+  display: inline;
+  margin: 0;
+}
+
+/* ==========================================
+   ESTILOS PARA TIPOS DE CAMPOS EN PANEL IZQUIERDO
+   ========================================== */
+
+/* Estilos para los step-number con colores por tipo */
+.step-number.type-h1 {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.1));
+  color: var(--color-h1);
+  border-left: 3px solid var(--color-h1);
+}
+
+.step-number.type-h2 {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.2), rgba(124, 58, 237, 0.1));
+  color: var(--color-h2);
+  border-left: 3px solid var(--color-h2);
+}
+
+.step-number.type-h3 {
+  background: linear-gradient(90deg, rgba(5, 150, 105, 0.2), rgba(5, 150, 105, 0.1));
+  color: var(--color-h3);
+  border-left: 3px solid var(--color-h3);
+}
+
+.step-number.type-text {
+  background: linear-gradient(90deg, rgba(107, 114, 128, 0.2), rgba(107, 114, 128, 0.1));
+  color: var(--color-text);
+  border-left: 3px solid var(--color-text);
+}
+
+.step-number.type-textarea {
+  background: linear-gradient(90deg, rgba(107, 114, 128, 0.2), rgba(107, 114, 128, 0.1));
+  color: var(--color-textarea);
+  border-left: 3px solid var(--color-textarea);
+}
+
+.step-number.type-list {
+  background: linear-gradient(90deg, rgba(107, 114, 128, 0.2), rgba(107, 114, 128, 0.1));
+  color: var(--color-list);
+  border-left: 3px solid var(--color-list);
+}
+
+/* Ajustar el padding para acomodar el borde izquierdo */
+.step-number[class*="type-"] {
+  padding-left: 12px;
+  margin-left: 0;
 }
