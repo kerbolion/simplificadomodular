@@ -1,12 +1,26 @@
-// Eventos y inicialización de la aplicación
+// ==========================================
+// EVENTOS E INICIALIZACIÓN ACTUALIZADA
+// ==========================================
+// Reemplazar el contenido de js/core/events.js
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
+  // Cargar funciones y proyectos
   functions.load();
   functions.init();
   projects.init();
+  
+  // Inicializar ordenamiento global automáticamente
+  initializeGlobalOrdering();
+  
+  // Renderizar todo
   renderAll();
-  updatePrompt();
+  
+  // Después de un breve delay, inicializar UI del ordenamiento global
+  setTimeout(() => {
+    renderGlobalOrderTab();
+    updatePrompt();
+  }, 100);
   
   // Agregar listener para auto-guardar cuando se cambie el nombre
   const projectNameInput = document.getElementById('project-name');
@@ -38,16 +52,11 @@ document.addEventListener('keydown', function(e) {
     e.preventDefault();
     toggleTheme();
   }
-});
-
-// Auto-guardar también cuando se pierda el foco del nombre del proyecto
-document.addEventListener('DOMContentLoaded', function() {
-  // Agregar listener para auto-guardar cuando se cambie el nombre
-  const projectNameInput = document.getElementById('project-name');
-  if (projectNameInput) {
-    projectNameInput.addEventListener('blur', () => {
-      scheduleAutoSave();
-    });
+  
+  // Ctrl/Cmd + Shift + O para ir a la pestaña de orden
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'O') {
+    e.preventDefault();
+    showTab('ordering');
   }
 });
 

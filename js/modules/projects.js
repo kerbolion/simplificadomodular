@@ -1014,3 +1014,385 @@ const projects = {
     });
   }
 };
+
+// ==========================================
+// INTEGRACIÓN COMPLETA DEL SISTEMA DE ORDENAMIENTO GLOBAL
+// ==========================================
+
+// Modificaciones necesarias en js/modules/projects.js
+
+// Actualizar getCurrentState para incluir el orden global
+const originalGetCurrentState = projects.getCurrentState;
+projects.getCurrentState = function() {
+  const baseState = originalGetCurrentState.call(this);
+  
+  // Agregar datos del ordenamiento global
+  return {
+    ...baseState,
+    orderingEnabled: state.orderingEnabled || false,
+    globalOrder: state.globalOrder || []
+  };
+};
+
+// Actualizar loadState para cargar el orden global
+const originalLoadState = projects.loadState;
+projects.loadState = function(data) {
+  // Cargar estado base
+  originalLoadState.call(this, data);
+  
+  // Cargar datos del ordenamiento global
+  importGlobalOrderData(data);
+  
+  // Actualizar UI del ordenamiento
+  if (state.orderingEnabled) {
+    setTimeout(() => {
+      addGlobalOrderingToggle();
+      renderGlobalOrderTab();
+    }, 100);
+  }
+};
+
+// Actualizar resetState para resetear el ordenamiento
+const originalResetState = projects.resetState;
+projects.resetState = function() {
+  // Resetear estado base
+  originalResetState.call(this);
+  
+  // Resetear ordenamiento global
+  state.orderingEnabled = false;
+  state.globalOrder = [];
+  
+  // Actualizar UI
+  addGlobalOrderingToggle();
+  const orderingTab = document.querySelector('.tab[data-tab="ordering"]');
+  const orderingContent = document.getElementById('tab-ordering');
+  if (orderingTab) orderingTab.remove();
+  if (orderingContent) orderingContent.remove();
+};
+
+// ==========================================
+// ESTILOS CSS ADICIONALES PARA EL ORDENAMIENTO
+// ==========================================
+
+// Agregar estilos dinámicamente
+function addGlobalOrderingStyles() {
+  // Verificar si ya se agregaron los estilos
+  if (document.getElementById('global-ordering-styles')) return;
+  
+  const styles = document.createElement('style');
+  styles.id = 'global-ordering-styles';
+  styles.textContent = `
+    /* Estilos para el sistema de ordenamiento global */
+    .global-order-item {
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    
+    .global-order-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow-light);
+      border-color: var(--text-accent) !important;
+    }
+    
+    .global-order-item[draggable="true"] {
+      cursor: grab;
+    }
+    
+    .global-order-item[draggable="true"]:active {
+      cursor: grabbing;
+    }
+    
+    .global-order-item.dragging {
+      opacity: 0.5;
+      transform: scale(0.95);
+      z-index: 1000;
+    }
+    
+    .global-order-item.drag-over {
+      border-color: var(--text-accent) !important;
+      background: var(--text-accent)10 !important;
+    }
+    
+    .drag-handle {
+      opacity: 0.4;
+      transition: opacity 0.2s ease;
+    }
+    
+    .global-order-item:hover .drag-handle {
+      opacity: 0.8;
+    }
+    
+    /* Animaciones para los elementos */
+    .global-order-item-enter {
+      animation: slideInUp 0.3s ease-out;
+    }
+    
+    .global-order-item-exit {
+      animation: slideOutDown 0.3s ease-in;
+    }
+    
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes slideOutDown {
+      from {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+    }
+    
+    /* Mejoras para la pestaña de ordenamiento */
+    .tab[data-tab="ordering"] {
+      background: linear-gradient(90deg, var(--text-accent)20, var(--text-accent)10);
+      color: var(--text-accent);
+      font-weight: 600;
+    }
+    
+    .tab[data-tab="ordering"].active {
+      background: var(--bg-secondary);
+      color: var(--text-accent);
+      border-bottom: 3px solid var(--text-accent);
+    }
+    
+    /* Indicador de estado del ordenamiento */
+    .ordering-status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    
+    .ordering-status-indicator.active {
+      background: linear-gradient(90deg, var(--success), #059669);
+      color: white;
+    }
+    
+    .ordering-status-indicator.inactive {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+    
+    /* Responsive para dispositivos móviles */
+    @media (max-width: 768px) {
+      .global-order-item {
+        padding: 12px;
+      }
+      
+      .global-order-item .step-controls {
+        position: static;
+        margin-left: 0;
+        margin-top: 8px;
+        justify-content: center;
+      }
+      
+      .drag-handle {
+        display: none;
+      }
+    }
+  `;
+  
+  document.head.appendChild(styles);
+}
+
+// ==========================================
+// FUNCIONES DE VALIDACIÓN Y UTILIDAD
+// ==========================================
+
+// Validar la integridad del orden global
+function validateGlobalOrder() {
+  if (!state.globalOrder || !Array.isArray(state.globalOrder)) {
+    return { valid: false, errors: ['El orden global no es válido'] };
+  }
+  
+  const errors = [];
+  const duplicates = {};
+  
+  state.globalOrder.forEach((item, index) => {
+    // Validar estructura del elemento
+    if (!item.type || !item.hasOwnProperty('id') || !item.name) {
+      errors.push(`Elemento ${index + 1}: estructura inválida`);
+      return;
+    }
+    
+    // Validar tipos permitidos
+    if (!['section', 'flow', 'faqs'].includes(item.type)) {
+      errors.push(`Elemento ${index + 1}: tipo "${item.type}" no válido`);
+      return;
+    }
+    
+    // Verificar duplicados
+    const key = `${item.type}-${item.id}`;
+    if (duplicates[key]) {
+      errors.push(`Elemento ${index + 1}: duplicado de "${item.name}"`);
+    } else {
+      duplicates[key] = true;
+    }
+    
+    // Validar que el elemento existe
+    const element = getElementByTypeAndId(item.type, item.id);
+    if (!element && item.type !== 'faqs') {
+      errors.push(`Elemento ${index + 1}: "${item.name}" no existe`);
+    }
+  });
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+// Reparar orden global automáticamente
+function repairGlobalOrder() {
+  console.log('Reparando orden global...');
+  
+  const validation = validateGlobalOrder();
+  if (validation.valid) {
+    console.log('El orden global es válido');
+    return true;
+  }
+  
+  console.log('Errores encontrados:', validation.errors);
+  
+  // Regenerar orden basado en elementos existentes
+  state.globalOrder = generateDetailedOrder();
+  
+  console.log('Orden global reparado');
+  renderGlobalOrder();
+  updatePrompt();
+  scheduleAutoSave();
+  
+  return true;
+}
+
+// Estadísticas del orden global
+function getGlobalOrderStats() {
+  if (!state.globalOrder) {
+    return { total: 0, sections: 0, flows: 0, faqs: 0 };
+  }
+  
+  const stats = {
+    total: state.globalOrder.length,
+    sections: 0,
+    flows: 0,
+    faqs: 0
+  };
+  
+  state.globalOrder.forEach(item => {
+    if (item.type === 'section') stats.sections++;
+    else if (item.type === 'flow') stats.flows++;
+    else if (item.type === 'faqs') stats.faqs++;
+  });
+  
+  return stats;
+}
+
+// Exportar orden global como texto legible
+function exportGlobalOrderAsText() {
+  if (!isGlobalOrderingEnabled()) {
+    return 'El ordenamiento global no está habilitado.';
+  }
+  
+  let text = 'ORDEN GLOBAL DE ELEMENTOS\n';
+  text += '========================\n\n';
+  
+  state.globalOrder.forEach((item, index) => {
+    const element = getElementByTypeAndId(item.type, item.id);
+    text += `${index + 1}. ${item.name} (${item.type.toUpperCase()})`;
+    
+    if (item.type === 'section' && element) {
+      text += ` - ${element.fields.length} campos`;
+    } else if (item.type === 'flow' && element) {
+      text += ` - ${element.steps.length} pasos`;
+    } else if (item.type === 'faqs') {
+      text += ` - ${state.faqs.length} preguntas`;
+    }
+    
+    text += '\n';
+  });
+  
+  return text;
+}
+
+// ==========================================
+// INICIALIZACIÓN COMPLETA
+// ==========================================
+
+// Función de inicialización principal
+function initializeGlobalOrdering() {
+  // Agregar estilos
+  addGlobalOrderingStyles();
+  
+  // Agregar toggle en la configuración
+  setTimeout(() => {
+    addGlobalOrderingToggle();
+  }, 100);
+  
+  // Si el ordenamiento está habilitado, inicializar UI
+  if (state.orderingEnabled) {
+    setTimeout(() => {
+      renderGlobalOrderTab();
+      
+      // Validar y reparar si es necesario
+      const validation = validateGlobalOrder();
+      if (!validation.valid) {
+        console.warn('Orden global inválido, reparando...', validation.errors);
+        repairGlobalOrder();
+      }
+    }, 200);
+  }
+}
+
+// Agregar al evento de inicialización
+document.addEventListener('DOMContentLoaded', function() {
+  // Esperar a que se carguen los elementos básicos
+  setTimeout(initializeGlobalOrdering, 150);
+});
+
+// ==========================================
+// FUNCIONES DE DEPURACIÓN (DESARROLLO)
+// ==========================================
+
+// Funciones para debugging (remover en producción)
+window.debugGlobalOrdering = {
+  getState: () => ({
+    enabled: state.orderingEnabled,
+    order: state.globalOrder,
+    stats: getGlobalOrderStats()
+  }),
+  
+  validate: validateGlobalOrder,
+  repair: repairGlobalOrder,
+  export: exportGlobalOrderAsText,
+  
+  enable: () => {
+    state.orderingEnabled = true;
+    state.globalOrder = generateDetailedOrder();
+    renderGlobalOrderTab();
+    addGlobalOrderingToggle();
+    updatePrompt();
+  },
+  
+  disable: () => {
+    state.orderingEnabled = false;
+    state.globalOrder = [];
+    renderGlobalOrderTab();
+    addGlobalOrderingToggle();
+    updatePrompt();
+  }
+};
