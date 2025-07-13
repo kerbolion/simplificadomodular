@@ -1,64 +1,58 @@
 // ==========================================
-// INTERFAZ DE USUARIO PARA ORDENAMIENTO GLOBAL
+// INTERFAZ DE USUARIO PARA ORDENAMIENTO GLOBAL CON VISIBILIDAD
 // ==========================================
 
-// Renderizar la pestaña de ordenamiento global
+// Renderizar la pestaña de ordenamiento global (SIEMPRE VISIBLE)
 function renderGlobalOrderTab() {
   // Buscar si existe la pestaña de ordenamiento
   let orderingTab = document.querySelector('.tab[data-tab="ordering"]');
   let orderingContent = document.getElementById('tab-ordering');
   
-  if (state.orderingEnabled) {
-    // Crear pestaña si no existe
-    if (!orderingTab) {
-      const tabsContainer = document.querySelector('.tabs');
-      orderingTab = document.createElement('button');
-      orderingTab.className = 'tab';
-      orderingTab.setAttribute('data-tab', 'ordering');
-      orderingTab.onclick = () => showTab('ordering');
-      orderingTab.innerHTML = '📋 Orden';
-      tabsContainer.appendChild(orderingTab);
-    }
+  // Crear pestaña si no existe (SIEMPRE)
+  if (!orderingTab) {
+    const tabsContainer = document.querySelector('.tabs');
+    orderingTab = document.createElement('button');
+    orderingTab.className = 'tab';
+    orderingTab.setAttribute('data-tab', 'ordering');
+    orderingTab.onclick = () => showTab('ordering');
+    orderingTab.innerHTML = '📋 Orden';
+    tabsContainer.appendChild(orderingTab);
+  }
+  
+  // Crear contenido si no existe (SIEMPRE)
+  if (!orderingContent) {
+    orderingContent = document.createElement('div');
+    orderingContent.className = 'tab-content';
+    orderingContent.id = 'tab-ordering';
     
-    // Crear contenido si no existe
-    if (!orderingContent) {
-      orderingContent = document.createElement('div');
-      orderingContent.className = 'tab-content';
-      orderingContent.id = 'tab-ordering';
-      
-      const lastTabContent = document.querySelector('#tab-3');
-      if (lastTabContent && lastTabContent.parentNode) {
-        lastTabContent.parentNode.appendChild(orderingContent);
-      }
-    }
-    
-    // Actualizar contenido
-    orderingContent.innerHTML = `
-      <div class="section">
-        <h3>📋 Orden Global de Elementos</h3>
-        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
-          Arrastra y reorganiza los elementos para cambiar el orden en el que aparecen en el prompt final.
-        </p>
-        
-        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
-          <button type="button" class="btn-small" onclick="resetGlobalOrder()">🔄 Restablecer Orden</button>
-          <button type="button" class="btn-small btn-warning" onclick="toggleGlobalOrdering()">❌ Desactivar Ordenamiento</button>
-        </div>
-        
-        <div id="global-order-container"></div>
-      </div>
-    `;
-    
-    renderGlobalOrder();
-  } else {
-    // Remover pestaña y contenido si existen
-    if (orderingTab) {
-      orderingTab.remove();
-    }
-    if (orderingContent) {
-      orderingContent.remove();
+    const lastTabContent = document.querySelector('#tab-3');
+    if (lastTabContent && lastTabContent.parentNode) {
+      lastTabContent.parentNode.appendChild(orderingContent);
     }
   }
+  
+  // Actualizar contenido
+  orderingContent.innerHTML = `
+    <div class="section">
+      <h3>📋 Orden Global de Elementos</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
+        Arrastra y reorganiza los elementos para cambiar el orden en el que aparecen en el prompt final. 
+        Usa el ojo para ocultar/mostrar elementos en el prompt.
+      </p>
+      
+      <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+        <button type="button" class="btn-small" onclick="resetGlobalOrder()">🔄 Restablecer Orden</button>
+        <button type="button" class="btn-small" onclick="toggleAllElementsVisibility()">👁️ Mostrar/Ocultar Todo</button>
+        <span style="font-size: 13px; color: var(--text-accent); align-self: center; background: var(--text-accent)20; padding: 4px 8px; border-radius: 4px; font-weight: 600;">
+          ✅ Orden personalizado activo
+        </span>
+      </div>
+      
+      <div id="global-order-container"></div>
+    </div>
+  `;
+  
+  renderGlobalOrder();
 }
 
 // Renderizar lista de elementos en orden global
@@ -97,9 +91,12 @@ function renderGlobalOrder() {
       additionalInfo = `${state.faqs.length} preguntas`;
     }
     
+    // Verificar si el elemento está visible
+    const isVisible = item.visible !== false; // Por defecto visible
+    
     return `
-      <div class="global-order-item" data-index="${index}" 
-           style="background: var(--bg-tertiary); border: 2px solid var(--border-secondary); border-radius: 8px; padding: 16px; margin-bottom: 12px; position: relative; transition: all 0.2s ease; cursor: grab;">
+      <div class="global-order-item ${!isVisible ? 'hidden-element' : ''}" data-index="${index}" 
+           style="background: var(--bg-tertiary); border: 2px solid var(--border-secondary); border-radius: 8px; padding: 16px; margin-bottom: 12px; position: relative; transition: all 0.2s ease; cursor: grab; ${!isVisible ? 'opacity: 0.5;' : ''}">
         
         <div style="display: flex; align-items: center; justify-content: space-between;">
           <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
@@ -108,8 +105,9 @@ function renderGlobalOrder() {
             </div>
             
             <div style="flex: 1;">
-              <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">
+              <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 2px; ${!isVisible ? 'text-decoration: line-through;' : ''}">
                 ${escapeHtml(elementName)}
+                ${!isVisible ? ' <span style="color: var(--text-secondary); font-size: 12px;">(Oculto)</span>' : ''}
               </div>
               <div style="font-size: 12px; color: var(--text-secondary);">
                 ${config.label}${additionalInfo ? ` • ${additionalInfo}` : ''}
@@ -126,7 +124,13 @@ function renderGlobalOrder() {
           <div class="step-controls" style="margin-left: 16px;">
             ${index > 0 ? `<button class="step-btn" onclick="moveGlobalElementUp(${index})" title="Subir">↑</button>` : ''}
             ${index < state.globalOrder.length - 1 ? `<button class="step-btn" onclick="moveGlobalElementDown(${index})" title="Bajar">↓</button>` : ''}
-            <button class="step-btn" onclick="goToElement('${item.type}', ${item.id})" title="Ir al elemento" style="background: ${config.color}; color: white;">👁️</button>
+            <button class="step-btn" onclick="toggleElementVisibility(${index})" title="${isVisible ? 'Ocultar elemento' : 'Mostrar elemento'}" 
+                    style="background: ${isVisible ? '#ef4444' : '#10b981'}; color: white;">
+              ${isVisible ? '👁️' : '🙈'}
+            </button>
+            <button class="step-btn" onclick="goToElement('${item.type}', ${item.id})" title="Ir al elemento" style="background: ${config.color}; color: white;">
+              ➡️
+            </button>
           </div>
         </div>
         
@@ -140,6 +144,63 @@ function renderGlobalOrder() {
   // Inicializar drag and drop
   initializeDragAndDrop();
 }
+
+// ==========================================
+// FUNCIONES DE VISIBILIDAD
+// ==========================================
+
+// Alternar visibilidad de un elemento específico
+function toggleElementVisibility(index) {
+  if (!state.globalOrder || index < 0 || index >= state.globalOrder.length) return;
+  
+  const item = state.globalOrder[index];
+  item.visible = item.visible !== false ? false : true; // Toggle visibility
+  
+  // Actualizar UI y prompt
+  renderGlobalOrder();
+  updatePrompt();
+  scheduleAutoSave();
+}
+
+// Alternar visibilidad de todos los elementos
+function toggleAllElementsVisibility() {
+  if (!state.globalOrder) return;
+  
+  // Verificar si hay elementos ocultos
+  const hasHiddenElements = state.globalOrder.some(item => item.visible === false);
+  
+  if (hasHiddenElements) {
+    // Si hay elementos ocultos, mostrar todos
+    state.globalOrder.forEach(item => {
+      item.visible = true;
+    });
+  } else {
+    // Si todos están visibles, ocultar todos excepto el primero
+    state.globalOrder.forEach((item, index) => {
+      item.visible = index === 0; // Solo el primer elemento visible
+    });
+  }
+  
+  // Actualizar UI y prompt
+  renderGlobalOrder();
+  updatePrompt();
+  scheduleAutoSave();
+}
+
+// Verificar si un elemento está visible
+function isElementVisible(type, id) {
+  if (!state.globalOrder) return true;
+  
+  const item = state.globalOrder.find(item => 
+    item.type === type && item.id === id
+  );
+  
+  return item ? (item.visible !== false) : true;
+}
+
+// ==========================================
+// FUNCIONES EXISTENTES ACTUALIZADAS
+// ==========================================
 
 // Inicializar funcionalidad de drag and drop
 function initializeDragAndDrop() {
@@ -156,7 +217,7 @@ function initializeDragAndDrop() {
     item.addEventListener('dragstart', (e) => {
       draggedElement = item;
       draggedIndex = parseInt(item.dataset.index);
-      item.style.opacity = '0.5';
+      item.style.opacity = '0.3';
       item.style.transform = 'scale(0.95)';
       e.dataTransfer.effectAllowed = 'move';
     });
@@ -220,48 +281,6 @@ function goToElement(type, id) {
       showTab(2); // Pestaña de FAQs
       break;
   }
-}
-
-// Agregar botón para activar ordenamiento global en la pestaña principal
-function addGlobalOrderingToggle() {
-  const configTab = document.getElementById('tab-0');
-  if (!configTab) return;
-  
-  // Buscar si ya existe el toggle
-  let existingToggle = document.getElementById('global-ordering-toggle');
-  if (existingToggle) {
-    existingToggle.remove();
-  }
-  
-  // Crear section para el toggle
-  const toggleSection = document.createElement('div');
-  toggleSection.id = 'global-ordering-toggle';
-  toggleSection.className = 'section';
-  toggleSection.style.background = 'linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary))';
-  toggleSection.style.borderColor = 'var(--text-accent)';
-  
-  toggleSection.innerHTML = `
-    <h3>📋 Ordenamiento Global</h3>
-    <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
-      Organiza el orden de aparición de secciones, flujos y FAQs en el prompt final.
-    </p>
-    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-      <button type="button" class="btn-small" onclick="toggleGlobalOrdering()" style="background: linear-gradient(90deg, #6366f1, #8b5cf6); color: white;">
-        ${state.orderingEnabled ? '✅ Ordenamiento Activo' : '🔧 Activar Ordenamiento'}
-      </button>
-      ${state.orderingEnabled ? `
-        <button type="button" class="btn-small" onclick="showTab('ordering')" style="background: var(--text-accent); color: white;">
-          📋 Gestionar Orden
-        </button>
-      ` : ''}
-      <span style="font-size: 12px; color: var(--text-secondary);">
-        ${state.orderingEnabled ? 'El orden personalizado está activo' : 'Usa el orden por defecto (Secciones → Flujos → FAQs)'}
-      </span>
-    </div>
-  `;
-  
-  // Insertar al final de la pestaña de configuración
-  configTab.appendChild(toggleSection);
 }
 
 // Modificar la función showTab existente para incluir la pestaña de ordenamiento

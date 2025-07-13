@@ -36,5 +36,13 @@ const state = {
   faqs: [
     { question: "¿Cuáles son los horarios de atención?", answer: "Atendemos de lunes a domingo de 8:00 AM a 10:00 PM" },
     { question: "¿Hacen delivery?", answer: "Sí, hacemos delivery en un radio de 5km" }
+  ],
+  // ORDENAMIENTO GLOBAL ACTIVO POR DEFECTO
+  orderingEnabled: true,
+  globalOrder: [
+    { type: 'section', id: 0, name: 'Instrucciones Generales' },
+    { type: 'section', id: 1, name: 'Reglas de comportamiento' },
+    { type: 'flow', id: 0, name: 'Flujo Principal' },
+    { type: 'faqs', id: 'all', name: 'Preguntas Frecuentes' }
   ]
 };

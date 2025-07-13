@@ -1,7 +1,6 @@
 // ==========================================
 // EVENTOS E INICIALIZACIÓN ACTUALIZADA
 // ==========================================
-// Reemplazar el contenido de js/core/events.js
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', function() {
@@ -10,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
   functions.init();
   projects.init();
   
-  // Inicializar ordenamiento global automáticamente
+  // Inicializar ordenamiento global automáticamente (SIEMPRE ACTIVO)
   initializeGlobalOrdering();
   
   // Renderizar todo
@@ -18,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Después de un breve delay, inicializar UI del ordenamiento global
   setTimeout(() => {
-    renderGlobalOrderTab();
+    renderGlobalOrderTab(); // Mostrar pestaña de orden siempre
     updatePrompt();
   }, 100);
   

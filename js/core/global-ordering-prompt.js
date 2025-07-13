@@ -1,8 +1,8 @@
 // ==========================================
-// GENERACIÓN DE PROMPT CON ORDEN GLOBAL
+// GENERACIÓN DE PROMPT CON ORDEN GLOBAL Y VISIBILIDAD
 // ==========================================
 
-// Función updatePrompt actualizada para usar el orden global
+// Función updatePrompt actualizada para usar el orden global con visibilidad
 function updatePromptWithGlobalOrder() {
   const businessName = document.getElementById('business-name')?.value || '[Nombre negocio]';
 
@@ -11,18 +11,16 @@ function updatePromptWithGlobalOrder() {
   // Título principal con color
   html += `<span class="output-title">Prompt para Asistente IA – "${businessName}"</span>\n\n`;
 
-  if (isGlobalOrderingEnabled()) {
-    // Usar orden global personalizado
-    state.globalOrder.forEach(item => {
+  // SIEMPRE usar orden global, pero solo elementos visibles
+  state.globalOrder.forEach(item => {
+    // Solo generar contenido si el elemento está visible
+    if (item.visible !== false) {
       const content = generateElementContent(item);
       if (content) {
         html += content + '\n';
       }
-    });
-  } else {
-    // Usar orden por defecto (comportamiento original)
-    html += generateDefaultOrderContent();
-  }
+    }
+  });
 
   // Actualizar output con HTML coloreado
   document.getElementById('output').innerHTML = html.trim();
@@ -165,7 +163,7 @@ function generateFAQsContent() {
   return html;
 }
 
-// Generar contenido con orden por defecto (comportamiento original)
+// Generar contenido con orden por defecto (comportamiento original) - FUNCIÓN DE RESPALDO
 function generateDefaultOrderContent() {
   let html = '';
   
@@ -199,12 +197,12 @@ const originalUpdatePrompt = window.updatePrompt;
 window.updatePrompt = updatePromptWithGlobalOrder;
 
 // ==========================================
-// SINCRONIZACIÓN AUTOMÁTICA
+// SINCRONIZACIÓN AUTOMÁTICA CON VISIBILIDAD
 // ==========================================
 
-// Hook para sincronizar cuando se modifican elementos
+// Hook para sincronizar cuando se modifican elementos (preservando visibilidad)
 function syncElementChanges() {
-  if (!isGlobalOrderingEnabled()) return;
+  if (!state.globalOrder) return;
   
   // Verificar si hay elementos nuevos que no están en el orden global
   const currentOrder = state.globalOrder || [];
@@ -239,7 +237,7 @@ function syncElementChanges() {
     }
   }
   
-  // Limpiar elementos huérfanos (elementos que ya no existen)
+  // Limpiar elementos huérfanos (elementos que ya no existen) pero preservar visibilidad
   const elementsToRemove = [];
   currentOrder.forEach((item, index) => {
     let elementExists = false;
@@ -268,205 +266,68 @@ function syncElementChanges() {
 }
 
 // ==========================================
-// EXPORTACIÓN E IMPORTACIÓN CON ORDEN GLOBAL
+// FUNCIONES DE UTILIDAD PARA VISIBILIDAD
 // ==========================================
 
-// Funciones para incluir el orden global en el guardado/carga de proyectos
+// Agregar elemento con visibilidad por defecto
+function addElementToGlobalOrderWithVisibility(type, id, name, position = -1, visible = true) {
+  if (!state.globalOrder) {
+    state.globalOrder = [];
+  }
+  
+  const element = { type, id, name, visible };
+  
+  if (position === -1) {
+    state.globalOrder.push(element);
+  } else {
+    state.globalOrder.splice(position, 0, element);
+  }
+  
+  renderGlobalOrder();
+  updatePrompt();
+  scheduleAutoSave();
+}
+
+// Obtener estadísticas de visibilidad
+function getVisibilityStats() {
+  if (!state.globalOrder) return { total: 0, visible: 0, hidden: 0 };
+  
+  const total = state.globalOrder.length;
+  const visible = state.globalOrder.filter(item => item.visible !== false).length;
+  const hidden = total - visible;
+  
+  return { total, visible, hidden };
+}
+
+// ==========================================
+// EXPORTACIÓN E IMPORTACIÓN CON VISIBILIDAD
+// ==========================================
+
+// Funciones para incluir el orden global con visibilidad en el guardado/carga de proyectos
 function exportGlobalOrderData() {
   return {
-    orderingEnabled: state.orderingEnabled || false,
+    orderingEnabled: true, // Siempre true
     globalOrder: state.globalOrder || []
   };
 }
 
 function importGlobalOrderData(data) {
-  if (data.orderingEnabled !== undefined) {
-    state.orderingEnabled = data.orderingEnabled;
-  }
+  // Siempre habilitar ordenamiento
+  state.orderingEnabled = true;
+  
   if (data.globalOrder && Array.isArray(data.globalOrder)) {
     state.globalOrder = data.globalOrder;
+    // Asegurar que todos los elementos tengan propiedad visible
+    state.globalOrder.forEach(item => {
+      if (item.visible === undefined) {
+        item.visible = true; // Por defecto visible para elementos importados
+      }
+    });
+  } else {
+    // Generar orden por defecto si no existe
+    state.globalOrder = generateDetailedOrder();
   }
   
   // Validar y limpiar el orden importado
-  if (state.orderingEnabled && state.globalOrder) {
-    syncElementChanges();
-  }
+  syncElementChanges();
 }
-
-// ==========================================
-// INTEGRACIÓN CON SISTEMA EXISTENTE
-// ==========================================
-
-// Hooks para las funciones existentes de secciones
-const originalAddSection = window.addSection;
-window.addSection = function() {
-  const initialLength = state.sections.length;
-  originalAddSection();
-  
-  // Si se agregó una nueva sección y el ordenamiento está activo
-  if (state.sections.length > initialLength && isGlobalOrderingEnabled()) {
-    const newIndex = state.sections.length - 1;
-    syncSectionWithGlobalOrder('add', newIndex, state.sections[newIndex].name);
-  }
-};
-
-const originalDeleteSection = window.deleteSection;
-window.deleteSection = function() {
-  if (state.sections.length <= 1) {
-    alert("Debe haber al menos una sección");
-    return;
-  }
-  
-  const currentIndex = state.currentSection;
-  const sectionName = state.sections[currentIndex].name;
-  
-  if (confirm(`¿Eliminar la sección "${sectionName}"?`)) {
-    // Sincronizar antes de eliminar
-    if (isGlobalOrderingEnabled()) {
-      syncSectionWithGlobalOrder('remove', currentIndex, sectionName);
-    }
-    
-    state.sections.splice(currentIndex, 1);
-    state.currentSection = Math.max(0, state.currentSection - 1);
-    renderSections();
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-};
-
-const originalRenameSection = window.renameSection;
-window.renameSection = function() {
-  const newName = document.getElementById('section-name').value.trim();
-  if (newName) {
-    const currentIndex = state.currentSection;
-    state.sections[currentIndex].name = newName;
-    
-    // Sincronizar el cambio de nombre
-    if (isGlobalOrderingEnabled()) {
-      syncSectionWithGlobalOrder('rename', currentIndex, newName);
-    }
-    
-    renderSections();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-};
-
-// Hooks para las funciones existentes de flujos
-const originalAddFlow = window.addFlow;
-window.addFlow = function() {
-  const name = prompt("Nombre del nuevo flujo:", `Flujo ${state.flows.length + 1}`);
-  if (name && name.trim()) {
-    const initialLength = state.flows.length;
-    state.flows.push({ 
-      name: name.trim(), 
-      steps: [{ text: '', functions: [] }] 
-    });
-    state.currentFlow = state.flows.length - 1;
-    
-    // Sincronizar si el ordenamiento está activo
-    if (isGlobalOrderingEnabled()) {
-      syncFlowWithGlobalOrder('add', state.currentFlow, name.trim());
-    }
-    
-    renderFlows();
-    renderSteps();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-};
-
-const originalDeleteFlow = window.deleteFlow;
-window.deleteFlow = function() {
-  if (state.flows.length <= 1) {
-    alert("Debe haber al menos un flujo");
-    return;
-  }
-  
-  const currentIndex = state.currentFlow;
-  const flowName = state.flows[currentIndex].name;
-  
-  if (confirm(`¿Eliminar el flujo "${flowName}"?`)) {
-    // Sincronizar antes de eliminar
-    if (isGlobalOrderingEnabled()) {
-      syncFlowWithGlobalOrder('remove', currentIndex, flowName);
-    }
-    
-    state.flows.splice(currentIndex, 1);
-    state.currentFlow = Math.max(0, state.currentFlow - 1);
-    renderFlows();
-    renderSteps();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-};
-
-const originalRenameFlow = window.renameFlow;
-window.renameFlow = function() {
-  const newName = document.getElementById('flow-name').value.trim();
-  if (newName) {
-    const currentIndex = state.currentFlow;
-    state.flows[currentIndex].name = newName;
-    
-    // Sincronizar el cambio de nombre
-    if (isGlobalOrderingEnabled()) {
-      syncFlowWithGlobalOrder('rename', currentIndex, newName);
-    }
-    
-    renderFlows();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-};
-
-// Hook para FAQs
-const originalAddFAQ = window.addFAQ;
-window.addFAQ = function() {
-  const wasEmpty = state.faqs.length === 0;
-  originalAddFAQ();
-  
-  // Si antes no había FAQs y ahora sí, agregar al orden global
-  if (wasEmpty && state.faqs.length > 0 && isGlobalOrderingEnabled()) {
-    const exists = state.globalOrder.some(item => item.type === 'faqs');
-    if (!exists) {
-      addElementToGlobalOrder('faqs', 'all', 'Preguntas Frecuentes');
-    }
-  }
-};
-
-const originalRemoveFAQ = window.removeFAQ;
-window.removeFAQ = function(index) {
-  if (confirm('¿Eliminar esta pregunta frecuente?')) {
-    state.faqs.splice(index, 1);
-    
-    // Si no quedan FAQs, remover del orden global
-    if (state.faqs.length === 0 && isGlobalOrderingEnabled()) {
-      const faqIndex = state.globalOrder.findIndex(item => item.type === 'faqs');
-      if (faqIndex !== -1) {
-        removeElementFromGlobalOrder(faqIndex);
-      }
-    }
-    
-    renderFAQs();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-};
-
-// ==========================================
-// INICIALIZACIÓN
-// ==========================================
-
-// Modificar la inicialización para incluir el toggle de ordenamiento
-document.addEventListener('DOMContentLoaded', function() {
-  // Esperar a que se carguen los elementos básicos
-  setTimeout(() => {
-    addGlobalOrderingToggle();
-    
-    // Si el ordenamiento está habilitado, mostrar la pestaña
-    if (state.orderingEnabled) {
-      renderGlobalOrderTab();
-    }
-  }, 100);
-});
