@@ -77,7 +77,7 @@ function scheduleAutoSave() {
         showAutoSaveIndicator();
       }
     }
-  }, 5000); // Auto-guardar cada 5 segundos después de cambios
+  }, 3600000); // Auto-guardar cada 5 segundos después de cambios
 }
 
 // Función opcional para mostrar indicador visual sutil

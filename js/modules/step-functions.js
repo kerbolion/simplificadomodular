@@ -44,6 +44,7 @@ function renderStepFunction(stepIndex, funcIndex, func) {
   // Controles de reordenamiento para funciones en pasos
   const functionControls = `
     <div class="step-controls">
+      <button class="step-btn" onclick="duplicateFunction(${stepIndex}, ${funcIndex})" title="Duplicar función">📄</button>
       ${funcIndex > 0 ? `<button class="step-btn" onclick="moveStepFunction(${stepIndex}, ${funcIndex}, -1)" title="Subir función">↑</button>` : ''}
       ${funcIndex < stepFunctions.length - 1 ? `<button class="step-btn" onclick="moveStepFunction(${stepIndex}, ${funcIndex}, 1)" title="Bajar función">↓</button>` : ''}
       <button class="step-btn btn-danger" onclick="removeFunction(${stepIndex}, ${funcIndex})" title="Eliminar función">×</button>
@@ -141,6 +142,7 @@ function renderCustomFields(stepIndex, funcIndex, func) {
         // Controles de reordenamiento para campos personalizados
         const fieldControls = `
           <div class="step-controls" style="position: absolute; top: 8px; right: 8px;">
+            <button class="step-btn" onclick="duplicateCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex})" title="Duplicar campo">📄</button>
             ${fieldIndex > 0 ? `<button class="step-btn" onclick="moveCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, -1)" title="Subir campo">↑</button>` : ''}
             ${fieldIndex < customFields.length - 1 ? `<button class="step-btn" onclick="moveCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, 1)" title="Bajar campo">↓</button>` : ''}
             <button class="step-btn btn-danger" onclick="removeCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex})" title="Eliminar campo">×</button>
@@ -209,7 +211,7 @@ function moveCustomField(stepIndex, funcIndex, fieldIndex, direction) {
 }
 
 // ==========================================
-// FUNCIONES EXISTENTES (SIN CAMBIOS)
+// FUNCIONES EXISTENTES CON DUPLICAR
 // ==========================================
 
 function addFunction(stepIndex) {
@@ -225,6 +227,19 @@ function addFunction(stepIndex) {
     type: firstFunc,
     customFields: []
   });
+  
+  renderSteps();
+  updatePrompt();
+  scheduleAutoSave();
+}
+
+function duplicateFunction(stepIndex, funcIndex) {
+  const functionToDuplicate = state.flows[state.currentFlow].steps[stepIndex].functions[funcIndex];
+  // Crear una copia profunda de la función
+  const duplicatedFunction = JSON.parse(JSON.stringify(functionToDuplicate));
+  
+  // Insertar la función duplicada después de la actual
+  state.flows[state.currentFlow].steps[stepIndex].functions.splice(funcIndex + 1, 0, duplicatedFunction);
   
   renderSteps();
   updatePrompt();
@@ -260,6 +275,27 @@ function addCustomField(stepIndex, funcIndex) {
   });
   
   renderSteps();
+  scheduleAutoSave();
+}
+
+function duplicateCustomField(stepIndex, funcIndex, fieldIndex) {
+  const func = state.flows[state.currentFlow].steps[stepIndex].functions[funcIndex];
+  if (!func.customFields) return;
+  
+  const fieldToDuplicate = func.customFields[fieldIndex];
+  // Crear una copia profunda del campo
+  const duplicatedField = JSON.parse(JSON.stringify(fieldToDuplicate));
+  
+  // Si tiene nombre, agregar " - Copia"
+  if (duplicatedField.name) {
+    duplicatedField.name = duplicatedField.name + " - Copia";
+  }
+  
+  // Insertar el campo duplicado después del actual
+  func.customFields.splice(fieldIndex + 1, 0, duplicatedField);
+  
+  renderSteps();
+  updatePrompt();
   scheduleAutoSave();
 }
 

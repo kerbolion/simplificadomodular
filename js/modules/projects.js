@@ -151,6 +151,354 @@ const projects = {
     }
   },
 
+  // Eliminar versión específica
+  deleteVersion() {
+    if (!this.current || !this.currentVersion) {
+      alert('No hay versión seleccionada para eliminar');
+      return;
+    }
+
+    const project = this.saved[this.current];
+    const versionCount = Object.keys(project.versions || {}).length;
+    
+    if (versionCount <= 1) {
+      alert('No se puede eliminar la única versión del proyecto');
+      return;
+    }
+
+    const versionDate = new Date(this.currentVersion).toLocaleString();
+    if (confirm(`¿Eliminar la versión del ${versionDate}?\n\nEsta acción no se puede deshacer.`)) {
+      // Eliminar la versión
+      delete project.versions[this.currentVersion];
+      
+      // Si no quedan versiones, crear una vacía
+      const remainingVersions = Object.keys(project.versions);
+      if (remainingVersions.length === 0) {
+        const now = new Date().toISOString();
+        project.versions[now] = {
+          created: now,
+          data: this.getEmptyProjectData()
+        };
+        this.currentVersion = now;
+      } else {
+        // Cargar la versión más reciente disponible
+        const latestVersion = remainingVersions.sort().pop();
+        this.currentVersion = latestVersion;
+        this.loadState(project.versions[latestVersion].data);
+      }
+      
+      this.save();
+      this.renderVersions();
+      renderAll();
+      updatePrompt();
+      
+      alert('Versión eliminada exitosamente');
+    }
+  },
+
+  // Eliminar múltiples versiones con modal y checkboxes
+  deleteMultipleVersions() {
+    if (!this.current || !this.saved[this.current]) {
+      alert('No hay proyecto seleccionado');
+      return;
+    }
+
+    const project = this.saved[this.current];
+    const versions = Object.keys(project.versions || {}).sort().reverse(); // Más recientes primero
+    
+    if (versions.length <= 1) {
+      alert('Este proyecto solo tiene una versión');
+      return;
+    }
+
+    // Crear y mostrar modal
+    this.showVersionSelectionModal(versions, project);
+  },
+
+  // Mostrar modal de selección de versiones
+  showVersionSelectionModal(versions, project) {
+    // Crear modal
+    const modal = document.createElement('div');
+    modal.id = 'version-modal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    `;
+
+    // Crear contenido del modal
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 70vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-secondary);
+    `;
+
+    // Generar HTML del contenido
+    modalContent.innerHTML = `
+      <h3 style="margin: 0 0 20px 0; color: var(--text-primary); font-size: 1.3em;">
+        🗑️ Eliminar Versiones del Proyecto
+      </h3>
+      
+      <p style="margin: 0 0 16px 0; color: var(--text-secondary); font-size: 14px;">
+        Selecciona las versiones que deseas eliminar. Debe quedar al menos una versión.
+      </p>
+
+      <div id="version-list" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-secondary); border-radius: 6px; margin-bottom: 16px;">
+        ${versions.map((timestamp, index) => {
+          const date = new Date(timestamp).toLocaleString();
+          const isCurrent = timestamp === this.currentVersion;
+          const isDisabled = versions.length === 1; // Solo deshabilitar si es la única
+          
+          return `
+            <div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-secondary); transition: background 0.2s; cursor: pointer;" 
+                 onmouseover="this.style.background='var(--bg-tertiary)'" 
+                 onmouseout="this.style.background='transparent'"
+                 onclick="this.querySelector('input[type=checkbox]').click()">
+              
+              <div style="width: 20px; margin-right: 16px; display: flex; justify-content: center;">
+                <input type="checkbox" 
+                       value="${timestamp}" 
+                       ${isDisabled ? 'disabled' : ''} 
+                       style="transform: scale(1.3); cursor: pointer;"
+                       onclick="event.stopPropagation()">
+              </div>
+              
+              <div style="flex: 1; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; flex-direction: column;">
+                  <div style="font-weight: ${isCurrent ? '600' : '400'}; color: var(--text-primary); font-size: 14px; margin-bottom: 2px;">
+                    ${date}
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-secondary);">
+                    Versión ${index + 1} de ${versions.length}
+                  </div>
+                </div>
+                
+                ${isCurrent ? `
+                  <div style="background: linear-gradient(90deg, #059669, #10b981); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                    ACTUAL
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+        <button type="button" id="select-all-btn" class="btn-small" style="flex: 1;">
+          ☑️ Seleccionar Todo
+        </button>
+        <button type="button" id="select-old-btn" class="btn-small" style="flex: 1;">
+          🕒 Solo Antiguas
+        </button>
+        <button type="button" id="clear-selection-btn" class="btn-small" style="flex: 1;">
+          ✖️ Limpiar
+        </button>
+      </div>
+
+      <div id="selection-info" style="margin-bottom: 16px; padding: 8px; border-radius: 4px; background: var(--bg-tertiary); font-size: 13px; color: var(--text-secondary);">
+        0 versiones seleccionadas
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" id="cancel-btn" class="btn-small" style="background: var(--bg-tertiary); color: var(--text-secondary);">
+          Cancelar
+        </button>
+        <button type="button" id="delete-selected-btn" class="btn-small btn-danger" disabled>
+          🗑️ Eliminar Seleccionadas
+        </button>
+      </div>
+    `;
+
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+
+    // Agregar funcionalidad
+    this.setupModalFunctionality(modal, versions);
+  },
+
+  // Configurar funcionalidad del modal
+  setupModalFunctionality(modal, versions) {
+    const checkboxes = modal.querySelectorAll('input[type="checkbox"]:not([disabled])');
+    const selectAllBtn = modal.querySelector('#select-all-btn');
+    const selectOldBtn = modal.querySelector('#select-old-btn');
+    const clearSelectionBtn = modal.querySelector('#clear-selection-btn');
+    const deleteBtn = modal.querySelector('#delete-selected-btn');
+    const cancelBtn = modal.querySelector('#cancel-btn');
+    const selectionInfo = modal.querySelector('#selection-info');
+
+    // Función para actualizar info de selección
+    const updateSelectionInfo = () => {
+      const selected = Array.from(checkboxes).filter(cb => cb.checked);
+      const count = selected.length;
+      
+      selectionInfo.textContent = count === 0 ? '0 versiones seleccionadas' : 
+        count === 1 ? '1 versión seleccionada' : `${count} versiones seleccionadas`;
+      
+      deleteBtn.disabled = count === 0;
+      
+      // Verificar que no se seleccionen todas las versiones
+      if (count >= versions.length) {
+        selectionInfo.textContent = '⚠️ Debe quedar al menos una versión';
+        selectionInfo.style.color = 'var(--danger)';
+        deleteBtn.disabled = true;
+      } else {
+        selectionInfo.style.color = 'var(--text-secondary)';
+      }
+    };
+
+    // Listeners para checkboxes
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', updateSelectionInfo);
+    });
+
+    // Seleccionar todo
+    selectAllBtn.addEventListener('click', () => {
+      // Seleccionar todos excepto uno (para que no quede sin versiones)
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = index < checkboxes.length - 1;
+      });
+      updateSelectionInfo();
+    });
+
+    // Seleccionar solo versiones antiguas (mantener las 2 más recientes)
+    selectOldBtn.addEventListener('click', () => {
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.checked = index >= 2; // Mantener las 2 más recientes
+      });
+      updateSelectionInfo();
+    });
+
+    // Limpiar selección
+    clearSelectionBtn.addEventListener('click', () => {
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      updateSelectionInfo();
+    });
+
+    // Eliminar seleccionadas
+    deleteBtn.addEventListener('click', () => {
+      const selectedTimestamps = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+
+      if (selectedTimestamps.length === 0) return;
+      if (selectedTimestamps.length >= versions.length) {
+        alert('No se pueden eliminar todas las versiones');
+        return;
+      }
+
+      // Mostrar confirmación
+      const selectedDates = selectedTimestamps.map(ts => new Date(ts).toLocaleString());
+      const confirmation = confirm(
+        `¿Eliminar ${selectedTimestamps.length} versiones?\n\n${selectedDates.join('\n')}\n\nEsta acción no se puede deshacer.`
+      );
+
+      if (confirmation) {
+        this.executeVersionDeletion(selectedTimestamps);
+        this.closeModal(modal);
+      }
+    });
+
+    // Cancelar
+    cancelBtn.addEventListener('click', () => {
+      this.closeModal(modal);
+    });
+
+    // Cerrar con ESC o click fuera
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        this.closeModal(modal);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.closeModal(modal);
+      }
+    });
+
+    // Inicializar info
+    updateSelectionInfo();
+  },
+
+  // Ejecutar eliminación de versiones
+  executeVersionDeletion(timestampsToDelete) {
+    const project = this.saved[this.current];
+    
+    // Eliminar las versiones seleccionadas
+    timestampsToDelete.forEach(timestamp => {
+      delete project.versions[timestamp];
+    });
+
+    // Si la versión actual fue eliminada, cargar otra
+    if (timestampsToDelete.includes(this.currentVersion)) {
+      const remainingVersions = Object.keys(project.versions);
+      const latestVersion = remainingVersions.sort().pop();
+      this.currentVersion = latestVersion;
+      this.loadState(project.versions[latestVersion].data);
+    }
+
+    this.save();
+    this.renderVersions();
+    renderAll();
+    updatePrompt();
+    
+    alert(`${timestampsToDelete.length} versiones eliminadas exitosamente`);
+  },
+
+  // Cerrar modal
+  closeModal(modal) {
+    if (modal && modal.parentNode) {
+      modal.parentNode.removeChild(modal);
+    }
+  },
+
+  // Obtener datos vacíos para proyecto
+  getEmptyProjectData() {
+    return {
+      businessName: '',
+      sections: [
+        {
+          name: "Instrucciones Generales",
+          fields: [
+            { type: "text", label: "Configuración", items: ["Profesional, cordial y claro", "Respuestas breves, máximo 3 renglones"] },
+            { type: "textarea", label: "Contexto", value: "Actúa como encargado de tomar pedidos por WhatsApp" }
+          ]
+        }
+      ],
+      faqs: [
+        { question: "¿Cuáles son los horarios de atención?", answer: "Atendemos de lunes a domingo de 8:00 AM a 10:00 PM" },
+        { question: "¿Hacen delivery?", answer: "Sí, hacemos delivery en un radio de 5km" }
+      ],
+      flows: [{
+        name: "Flujo Principal",
+        steps: [
+          { text: "Saluda al cliente y pregúntale si desea retirar en tienda o envío a domicilio", functions: [] },
+          { text: "Solicita el pedido (productos y cantidades) y, si aplica, la dirección para envío.", functions: [] }
+        ]
+      }],
+      currentFlow: 0,
+      currentSection: 0,
+      functions: functions.getAll()
+    };
+  },
+
   // Exportar proyecto
   exportProject() {
     if (!this.current || !this.saved[this.current]) {
@@ -481,6 +829,48 @@ const projects = {
       option.selected = timestamp === this.currentVersion;
       selector.appendChild(option);
     });
+
+    // Agregar botones de gestión de versiones si hay más de una versión
+    this.renderVersionControls();
+  },
+
+  // Renderizar controles de versiones
+  renderVersionControls() {
+    // Buscar si ya existe el contenedor de controles
+    let controlsContainer = document.getElementById('version-controls');
+    
+    if (!controlsContainer) {
+      // Crear el contenedor de controles de versiones
+      controlsContainer = document.createElement('div');
+      controlsContainer.id = 'version-controls';
+      controlsContainer.style.marginTop = '8px';
+      
+      // Insertar después del selector de versiones
+      const versionSelector = document.getElementById('version-selector');
+      if (versionSelector && versionSelector.parentNode) {
+        versionSelector.parentNode.appendChild(controlsContainer);
+      }
+    }
+
+    // Limpiar controles existentes
+    controlsContainer.innerHTML = '';
+
+    if (!this.current || !this.saved[this.current]) {
+      return;
+    }
+
+    const project = this.saved[this.current];
+    const versionCount = Object.keys(project.versions || {}).length;
+
+    if (versionCount > 1) {
+      controlsContainer.innerHTML = `
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="btn-small btn-danger" onclick="projects.deleteVersion()" title="Eliminar versión actual">🗑️ Eliminar Versión</button>
+          <button type="button" class="btn-small btn-warning" onclick="projects.deleteMultipleVersions()" title="Seleccionar versiones para eliminar">☑️ Seleccionar para Eliminar</button>
+          <span style="font-size: 12px; color: var(--text-secondary); align-self: center;">${versionCount} versiones</span>
+        </div>
+      `;
+    }
   },
 
   // Obtener lista de proyectos

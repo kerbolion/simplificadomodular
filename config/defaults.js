@@ -11,7 +11,7 @@ const defaults = {
     name: 'Generador de Flujos IA',
     version: '2.0.0',
     author: 'Tu Nombre',
-    autoSaveInterval: 5000, // 5 segundos
+    autoSaveInterval: 3600000, // 5 segundos
     theme: 'light',
     language: 'es'
   },
@@ -84,6 +84,55 @@ const defaults = {
       ]
     }
   ],
+
+  // ==========================================
+  // TIPOS DE CAMPOS DISPONIBLES
+  // ==========================================
+  
+  fieldTypes: {
+    h1: {
+      name: 'Encabezado H1',
+      icon: '📰',
+      description: 'Título principal de sección',
+      color: '#2563eb', // Azul
+      render: (field) => `**${field.value}**`
+    },
+    h2: {
+      name: 'Encabezado H2',
+      icon: '📝',
+      description: 'Subtítulo de sección',
+      color: '#7c3aed', // Púrpura
+      render: (field) => `**${field.value}**`
+    },
+    h3: {
+      name: 'Encabezado H3',
+      icon: '📄',
+      description: 'Encabezado menor',
+      color: '#059669', // Verde
+      render: (field) => `**${field.value}**`
+    },
+    text: {
+      name: 'Campo de Texto',
+      icon: '📝',
+      description: 'Lista de elementos de texto',
+      color: '#6b7280', // Gris
+      render: (field) => field.items?.map(item => `- ${item}`).join('\n') || ''
+    },
+    textarea: {
+      name: 'Área de Texto',
+      icon: '📄',
+      description: 'Texto largo o párrafos',
+      color: '#6b7280', // Gris
+      render: (field) => field.value || ''
+    },
+    list: {
+      name: 'Lista Numerada',
+      icon: '📋',
+      description: 'Lista con numeración automática',
+      color: '#6b7280', // Gris
+      render: (field) => field.items?.map((item, index) => `${index + 1}. ${item}`).join('\n') || ''
+    }
+  },
 
   // ==========================================
   // FUNCIONES POR DEFECTO
@@ -214,6 +263,18 @@ const defaults = {
       minLength: 2,
       maxLength: 100,
       message: 'El nombre del negocio debe tener entre 2 y 100 caracteres'
+    },
+    
+    sectionName: {
+      minLength: 1,
+      maxLength: 100,
+      message: 'El nombre de la sección debe tener entre 1 y 100 caracteres'
+    },
+    
+    headerValue: {
+      minLength: 1,
+      maxLength: 200,
+      message: 'El encabezado debe tener entre 1 y 200 caracteres'
     },
     
     faqQuestion: {
