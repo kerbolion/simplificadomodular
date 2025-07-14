@@ -235,8 +235,8 @@ function addFunction(stepIndex) {
 
 function duplicateFunction(stepIndex, funcIndex) {
   const functionToDuplicate = state.flows[state.currentFlow].steps[stepIndex].functions[funcIndex];
-  // Crear una copia profunda de la función
-  const duplicatedFunction = JSON.parse(JSON.stringify(functionToDuplicate));
+  // Crear una copia profunda de la función con sufijos "- Copia"
+  const duplicatedFunction = duplicateFunctionWithSuffix(functionToDuplicate);
   
   // Insertar la función duplicada después de la actual
   state.flows[state.currentFlow].steps[stepIndex].functions.splice(funcIndex + 1, 0, duplicatedFunction);
@@ -244,6 +244,35 @@ function duplicateFunction(stepIndex, funcIndex) {
   renderSteps();
   updatePrompt();
   scheduleAutoSave();
+}
+
+// Función auxiliar para duplicar función con sufijos "- Copia" recursivamente
+function duplicateFunctionWithSuffix(func) {
+  // Crear copia profunda de la función
+  const duplicatedFunction = JSON.parse(JSON.stringify(func));
+  
+  // Agregar "- Copia" a parámetros de texto predefinidos
+  if (duplicatedFunction.params) {
+    Object.keys(duplicatedFunction.params).forEach(paramKey => {
+      if (typeof duplicatedFunction.params[paramKey] === 'string' && duplicatedFunction.params[paramKey].trim()) {
+        duplicatedFunction.params[paramKey] = duplicatedFunction.params[paramKey] + " - Copia";
+      }
+    });
+  }
+  
+  // Agregar "- Copia" a campos personalizados
+  if (duplicatedFunction.customFields && duplicatedFunction.customFields.length > 0) {
+    duplicatedFunction.customFields.forEach(field => {
+      if (field.name && field.name.trim()) {
+        field.name = field.name + " - Copia";
+      }
+      if (field.value && field.value.trim()) {
+        field.value = field.value + " - Copia";
+      }
+    });
+  }
+  
+  return duplicatedFunction;
 }
 
 function removeFunction(stepIndex, funcIndex) {
@@ -283,13 +312,8 @@ function duplicateCustomField(stepIndex, funcIndex, fieldIndex) {
   if (!func.customFields) return;
   
   const fieldToDuplicate = func.customFields[fieldIndex];
-  // Crear una copia profunda del campo
-  const duplicatedField = JSON.parse(JSON.stringify(fieldToDuplicate));
-  
-  // Si tiene nombre, agregar " - Copia"
-  if (duplicatedField.name) {
-    duplicatedField.name = duplicatedField.name + " - Copia";
-  }
+  // Crear una copia profunda del campo con sufijos "- Copia"
+  const duplicatedField = duplicateCustomFieldWithSuffix(fieldToDuplicate);
   
   // Insertar el campo duplicado después del actual
   func.customFields.splice(fieldIndex + 1, 0, duplicatedField);
@@ -297,6 +321,24 @@ function duplicateCustomField(stepIndex, funcIndex, fieldIndex) {
   renderSteps();
   updatePrompt();
   scheduleAutoSave();
+}
+
+// Función auxiliar para duplicar campo personalizado con sufijos "- Copia"
+function duplicateCustomFieldWithSuffix(field) {
+  // Crear copia profunda del campo
+  const duplicatedField = JSON.parse(JSON.stringify(field));
+  
+  // Agregar "- Copia" al nombre si no está vacío
+  if (duplicatedField.name && duplicatedField.name.trim()) {
+    duplicatedField.name = duplicatedField.name + " - Copia";
+  }
+  
+  // Agregar "- Copia" al valor si no está vacío
+  if (duplicatedField.value && duplicatedField.value.trim()) {
+    duplicatedField.value = duplicatedField.value + " - Copia";
+  }
+  
+  return duplicatedField;
 }
 
 function removeCustomField(stepIndex, funcIndex, fieldIndex) {

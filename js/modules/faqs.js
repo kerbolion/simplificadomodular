@@ -147,6 +147,38 @@ function removeFAQ(index) {
   }
 }
 
+// Agregar función de duplicado para FAQs individuales
+function duplicateFAQ(index) {
+  const faqToDuplicate = state.faqs[index];
+  // Crear una copia profunda del FAQ con sufijos "- Copia"
+  const duplicatedFAQ = duplicateFAQWithSuffix(faqToDuplicate);
+  
+  // Insertar el FAQ duplicado después del actual
+  state.faqs.splice(index + 1, 0, duplicatedFAQ);
+  
+  renderFAQs();
+  updatePrompt();
+  scheduleAutoSave();
+}
+
+// Función auxiliar para duplicar FAQ con sufijos "- Copia"
+function duplicateFAQWithSuffix(faq) {
+  // Crear copia profunda del FAQ
+  const duplicatedFAQ = JSON.parse(JSON.stringify(faq));
+  
+  // Agregar "- Copia" a la pregunta si no está vacía
+  if (duplicatedFAQ.question && duplicatedFAQ.question.trim()) {
+    duplicatedFAQ.question = duplicatedFAQ.question + " - Copia";
+  }
+  
+  // Agregar "- Copia" a la respuesta si no está vacía
+  if (duplicatedFAQ.answer && duplicatedFAQ.answer.trim()) {
+    duplicatedFAQ.answer = duplicatedFAQ.answer + " - Copia";
+  }
+  
+  return duplicatedFAQ;
+}
+
 function updateFAQ(index, field, value) {
   state.faqs[index][field] = value;
   // Usar debounce para evitar llamadas excesivas
@@ -162,6 +194,7 @@ function renderFAQs() {
   container.innerHTML = state.faqs.map((faq, index) => `
     <div class="list-item" style="flex-direction: column; align-items: stretch; background: var(--bg-tertiary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-secondary); position: relative; margin-bottom: 12px;">
       <div class="step-controls" style="position: absolute; top: 8px; right: 40px; display: flex; gap: 4px;">
+        <button class="step-btn" onclick="duplicateFAQ(${index})" title="Duplicar FAQ">📄</button>
         ${index > 0 ? `<button class="step-btn" onclick="moveFAQ(${index}, -1)" title="Subir">↑</button>` : ''}
         ${index < state.faqs.length - 1 ? `<button class="step-btn" onclick="moveFAQ(${index}, 1)" title="Bajar">↓</button>` : ''}
         <button class="step-btn" onclick="scrollToFAQInOutput()" title="Ir a las FAQ en el resultado" style="background: #f59e0b; color: white;">📍</button>

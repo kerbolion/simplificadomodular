@@ -305,9 +305,8 @@ function duplicateSection() {
   const newName = prompt("Nombre para la sección duplicada:", `${currentSection.name} - Copia`);
   
   if (newName && newName.trim()) {
-    // Crear una copia profunda de la sección actual
-    const duplicatedSection = JSON.parse(JSON.stringify(currentSection));
-    duplicatedSection.name = newName.trim();
+    // Crear una copia profunda de la sección actual con sufijos "- Copia"
+    const duplicatedSection = duplicateSectionWithSuffix(currentSection, newName.trim());
     
     // Insertar la sección duplicada después de la actual
     state.sections.splice(state.currentSection + 1, 0, duplicatedSection);
@@ -318,6 +317,55 @@ function duplicateSection() {
     updatePrompt();
     scheduleAutoSave();
   }
+}
+
+// Función auxiliar para duplicar sección con sufijos "- Copia" recursivamente
+function duplicateSectionWithSuffix(section, newName) {
+  // Crear copia profunda de la sección
+  const duplicatedSection = JSON.parse(JSON.stringify(section));
+  duplicatedSection.name = newName;
+  
+  // Procesar todos los campos de la sección
+  duplicatedSection.fields.forEach(field => {
+    // Agregar "- Copia" al label del campo
+    if (field.label && field.label.trim()) {
+      field.label = field.label + " - Copia";
+    }
+    
+    // Procesar según el tipo de campo
+    switch (field.type) {
+      case 'h1':
+      case 'h2':
+      case 'h3':
+        // Encabezados: agregar "- Copia" al valor
+        if (field.value && field.value.trim()) {
+          field.value = field.value + " - Copia";
+        }
+        break;
+        
+      case 'textarea':
+        // Textarea: agregar "- Copia" al valor
+        if (field.value && field.value.trim()) {
+          field.value = field.value + " - Copia";
+        }
+        break;
+        
+      case 'text':
+      case 'list':
+        // Campos de texto y listas: agregar "- Copia" a cada item
+        if (field.items && field.items.length > 0) {
+          field.items = field.items.map(item => {
+            if (typeof item === 'string' && item.trim()) {
+              return item + " - Copia";
+            }
+            return item;
+          });
+        }
+        break;
+    }
+  });
+  
+  return duplicatedSection;
 }
 
 function deleteSection() {
@@ -450,13 +498,8 @@ function editFieldLabel(fieldIndex) {
 // Función para duplicar un campo
 function duplicateField(fieldIndex) {
   const fieldToDuplicate = state.sections[state.currentSection].fields[fieldIndex];
-  // Crear una copia profunda del campo
-  const duplicatedField = JSON.parse(JSON.stringify(fieldToDuplicate));
-  
-  // Si el campo tiene label, agregar " - Copia" al nombre
-  if (duplicatedField.label) {
-    duplicatedField.label = duplicatedField.label + " - Copia";
-  }
+  // Crear una copia profunda del campo con sufijos "- Copia"
+  const duplicatedField = duplicateFieldWithSuffix(fieldToDuplicate);
   
   // Insertar el campo duplicado después del actual
   state.sections[state.currentSection].fields.splice(fieldIndex + 1, 0, duplicatedField);
@@ -464,6 +507,51 @@ function duplicateField(fieldIndex) {
   renderSectionContent();
   updatePrompt();
   scheduleAutoSave();
+}
+
+// Función auxiliar para duplicar campo con sufijos "- Copia" recursivamente
+function duplicateFieldWithSuffix(field) {
+  // Crear copia profunda del campo
+  const duplicatedField = JSON.parse(JSON.stringify(field));
+  
+  // Agregar "- Copia" al label si existe
+  if (duplicatedField.label && duplicatedField.label.trim()) {
+    duplicatedField.label = duplicatedField.label + " - Copia";
+  }
+  
+  // Procesar según el tipo de campo
+  switch (duplicatedField.type) {
+    case 'h1':
+    case 'h2':
+    case 'h3':
+      // Encabezados: agregar "- Copia" al valor
+      if (duplicatedField.value && duplicatedField.value.trim()) {
+        duplicatedField.value = duplicatedField.value + " - Copia";
+      }
+      break;
+      
+    case 'textarea':
+      // Textarea: agregar "- Copia" al valor
+      if (duplicatedField.value && duplicatedField.value.trim()) {
+        duplicatedField.value = duplicatedField.value + " - Copia";
+      }
+      break;
+      
+    case 'text':
+    case 'list':
+      // Campos de texto y listas: agregar "- Copia" a cada item
+      if (duplicatedField.items && duplicatedField.items.length > 0) {
+        duplicatedField.items = duplicatedField.items.map(item => {
+          if (typeof item === 'string' && item.trim()) {
+            return item + " - Copia";
+          }
+          return item;
+        });
+      }
+      break;
+  }
+  
+  return duplicatedField;
 }
 
 // Función para agregar encabezados H1, H2, H3 (mantenida por compatibilidad)

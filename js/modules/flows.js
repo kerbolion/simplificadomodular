@@ -4,6 +4,7 @@ function renderFlowControls() {
   
   let controlsHTML = `
     <button type="button" class="btn-small" onclick="addFlow()">➕ Nuevo Flujo</button>
+    <button type="button" class="btn-small" onclick="duplicateFlow()">📄 Duplicar</button>
     <button type="button" class="btn-small btn-danger" onclick="deleteFlow()">🗑️ Eliminar</button>
   `;
   
@@ -254,6 +255,69 @@ function addFlow() {
   }
 }
 
+// Función para duplicar flujo completo (NUEVA)
+function duplicateFlow() {
+  const currentFlow = state.flows[state.currentFlow];
+  const newName = prompt("Nombre para el flujo duplicado:", `${currentFlow.name} - Copia`);
+  
+  if (newName && newName.trim()) {
+    // Crear una copia profunda del flujo actual con sufijos "- Copia"
+    const duplicatedFlow = duplicateFlowWithSuffix(currentFlow, newName.trim());
+    
+    // Insertar el flujo duplicado después del actual
+    state.flows.splice(state.currentFlow + 1, 0, duplicatedFlow);
+    state.currentFlow = state.currentFlow + 1;
+    
+    renderFlows();
+    renderSteps();
+    updatePrompt();
+    scheduleAutoSave();
+  }
+}
+
+// Función auxiliar para duplicar flujo con sufijos "- Copia" recursivamente
+function duplicateFlowWithSuffix(flow, newName) {
+  // Crear copia profunda del flujo
+  const duplicatedFlow = JSON.parse(JSON.stringify(flow));
+  duplicatedFlow.name = newName;
+  
+  // Agregar "- Copia" a cada paso
+  duplicatedFlow.steps.forEach(step => {
+    // Agregar sufijo al texto del paso si no está vacío
+    if (step.text && step.text.trim()) {
+      step.text = step.text + " - Copia";
+    }
+    
+    // Procesar funciones del paso
+    if (step.functions && step.functions.length > 0) {
+      step.functions.forEach(func => {
+        // Agregar "- Copia" a parámetros de texto
+        if (func.params) {
+          Object.keys(func.params).forEach(paramKey => {
+            if (typeof func.params[paramKey] === 'string' && func.params[paramKey].trim()) {
+              func.params[paramKey] = func.params[paramKey] + " - Copia";
+            }
+          });
+        }
+        
+        // Agregar "- Copia" a campos personalizados
+        if (func.customFields && func.customFields.length > 0) {
+          func.customFields.forEach(field => {
+            if (field.name && field.name.trim()) {
+              field.name = field.name + " - Copia";
+            }
+            if (field.value && field.value.trim()) {
+              field.value = field.value + " - Copia";
+            }
+          });
+        }
+      });
+    }
+  });
+  
+  return duplicatedFlow;
+}
+
 function deleteFlow() {
   if (state.flows.length <= 1) {
     alert("Debe haber al menos un flujo");
@@ -313,8 +377,8 @@ function addStep() {
 
 function duplicateStep(index) {
   const stepToDuplicate = state.flows[state.currentFlow].steps[index];
-  // Crear una copia profunda del paso
-  const duplicatedStep = JSON.parse(JSON.stringify(stepToDuplicate));
+  // Crear una copia profunda del paso con sufijos "- Copia"
+  const duplicatedStep = duplicateStepWithSuffix(stepToDuplicate);
   
   // Insertar el paso duplicado después del actual
   state.flows[state.currentFlow].steps.splice(index + 1, 0, duplicatedStep);
@@ -322,6 +386,45 @@ function duplicateStep(index) {
   renderSteps();
   updatePrompt();
   scheduleAutoSave();
+}
+
+// Función auxiliar para duplicar paso con sufijos "- Copia" recursivamente
+function duplicateStepWithSuffix(step) {
+  // Crear copia profunda del paso
+  const duplicatedStep = JSON.parse(JSON.stringify(step));
+  
+  // Agregar "- Copia" al texto del paso si no está vacío
+  if (duplicatedStep.text && duplicatedStep.text.trim()) {
+    duplicatedStep.text = duplicatedStep.text + " - Copia";
+  }
+  
+  // Procesar funciones del paso
+  if (duplicatedStep.functions && duplicatedStep.functions.length > 0) {
+    duplicatedStep.functions.forEach(func => {
+      // Agregar "- Copia" a parámetros de texto
+      if (func.params) {
+        Object.keys(func.params).forEach(paramKey => {
+          if (typeof func.params[paramKey] === 'string' && func.params[paramKey].trim()) {
+            func.params[paramKey] = func.params[paramKey] + " - Copia";
+          }
+        });
+      }
+      
+      // Agregar "- Copia" a campos personalizados
+      if (func.customFields && func.customFields.length > 0) {
+        func.customFields.forEach(field => {
+          if (field.name && field.name.trim()) {
+            field.name = field.name + " - Copia";
+          }
+          if (field.value && field.value.trim()) {
+            field.value = field.value + " - Copia";
+          }
+        });
+      }
+    });
+  }
+  
+  return duplicatedStep;
 }
 
 function removeStep(index) {

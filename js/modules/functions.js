@@ -152,6 +152,68 @@ const functions = {
     this.editFunction(name);
   },
 
+  // Duplicar función global (NUEVA FUNCIÓN)
+  duplicateFunction(functionKey) {
+    const originalFunc = this.available[functionKey];
+    if (!originalFunc) return;
+
+    // Generar nuevo nombre único
+    let newKey = functionKey + '_copia';
+    let counter = 1;
+    while (this.available[newKey]) {
+      newKey = functionKey + '_copia_' + counter;
+      counter++;
+    }
+
+    // Crear copia profunda de la función con sufijos "- Copia"
+    const duplicatedFunc = this.duplicateFunctionWithSuffix(originalFunc);
+    
+    // Guardar la función duplicada
+    this.available[newKey] = duplicatedFunc;
+    
+    this.save();
+    this.render();
+    updatePrompt();
+  },
+
+  // Función auxiliar para duplicar función con sufijos "- Copia" recursivamente
+  duplicateFunctionWithSuffix(func) {
+    // Crear copia profunda de la función
+    const duplicatedFunc = JSON.parse(JSON.stringify(func));
+    
+    // Agregar "- Copia" al nombre
+    if (duplicatedFunc.name && duplicatedFunc.name.trim()) {
+      duplicatedFunc.name = duplicatedFunc.name + " - Copia";
+    }
+    
+    // Agregar "- Copia" a la descripción
+    if (duplicatedFunc.description && duplicatedFunc.description.trim()) {
+      duplicatedFunc.description = duplicatedFunc.description + " - Copia";
+    }
+    
+    // Procesar parámetros
+    if (duplicatedFunc.params && duplicatedFunc.params.length > 0) {
+      duplicatedFunc.params.forEach(param => {
+        // Agregar "- Copia" al label del parámetro
+        if (param.label && param.label.trim()) {
+          param.label = param.label + " - Copia";
+        }
+        
+        // Si hay opciones, agregar "- Copia" a cada una
+        if (param.options && Array.isArray(param.options)) {
+          param.options = param.options.map(option => {
+            if (typeof option === 'string' && option.trim()) {
+              return option + " - Copia";
+            }
+            return option;
+          });
+        }
+      });
+    }
+    
+    return duplicatedFunc;
+  },
+
   // Editar función existente
   editFunction(key) {
     const func = this.available[key];
@@ -245,9 +307,10 @@ const functions = {
     container.innerHTML = functionKeys.map((key, index) => {
       const func = this.available[key];
       
-      // Controles de reordenamiento para funciones
+      // Controles de reordenamiento para funciones (ACTUALIZADO)
       const functionControls = `
         <div style="display: flex; gap: 4px; align-items: center;">
+          <button class="btn-small" onclick="functions.duplicateFunction('${key}')" title="Duplicar función">📄</button>
           ${index > 0 ? `<button class="btn-small" onclick="functions.moveFunction('${key}', -1)" title="Subir función">⬆️</button>` : ''}
           ${index < functionKeys.length - 1 ? `<button class="btn-small" onclick="functions.moveFunction('${key}', 1)" title="Bajar función">⬇️</button>` : ''}
           <button class="btn-small" onclick="functions.editFunction('${key}')">✏️ Editar</button>
