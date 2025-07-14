@@ -41,6 +41,202 @@ function moveFlow(direction) {
 }
 
 // ==========================================
+// FUNCIÓN DE SCROLL PRECISO A PASO ESPECÍFICO
+// ==========================================
+function scrollToStepInOutput(stepIndex) {
+  const currentFlow = state.flows[state.currentFlow];
+  const step = currentFlow.steps[stepIndex];
+  
+  if (!step || !step.text || !step.text.trim()) {
+    console.warn('Paso no encontrado o vacío');
+    return;
+  }
+  
+  const outputPanel = document.querySelector('.panel.output');
+  const outputElement = document.getElementById('output');
+  
+  if (!outputPanel || !outputElement) {
+    console.warn('No se encontró el panel de salida');
+    return;
+  }
+  
+  // Buscar el texto específico del paso en el output
+  const outputContent = outputElement.innerHTML;
+  const stepText = step.text.trim();
+  
+  // Buscar el patrón del paso específico (número de paso + texto)
+  const escapedStepText = escapeRegex(stepText);
+  const stepPattern = new RegExp(`<span class="output-step-number">${stepIndex + 1}\\.</span>\\s*${escapedStepText}`, 'i');
+  const match = stepPattern.exec(outputContent);
+  
+  if (match) {
+    // Crear un elemento temporal para medir la posición
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = outputContent.substring(0, match.index);
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.visibility = 'hidden';
+    tempDiv.style.whiteSpace = 'pre-wrap';
+    tempDiv.style.fontFamily = outputElement.style.fontFamily || "'Consolas', 'Monaco', 'Courier New', monospace";
+    tempDiv.style.fontSize = outputElement.style.fontSize || '14px';
+    tempDiv.style.lineHeight = outputElement.style.lineHeight || '1.6';
+    tempDiv.style.width = outputElement.offsetWidth + 'px';
+    
+    document.body.appendChild(tempDiv);
+    
+    // Calcular la altura hasta el paso específico
+    const targetHeight = tempDiv.offsetHeight;
+    
+    // Limpiar elemento temporal
+    document.body.removeChild(tempDiv);
+    
+    // Hacer scroll al panel - paso al inicio
+    outputPanel.scrollTo({
+      top: Math.max(0, targetHeight), // Sin margen - paso al inicio del panel
+      behavior: 'smooth'
+    });
+    
+    // Mostrar feedback visual específico
+    const stepDescription = `Paso ${stepIndex + 1}: "${stepText.substring(0, 40)}${stepText.length > 40 ? '...' : ''}"`;
+    showStepScrollFeedback(stepDescription, true);
+  } else {
+    // Si no se encuentra el paso específico, ir al flujo completo
+    scrollToFlowInOutput();
+    const stepDescription = `Paso ${stepIndex + 1}: "${stepText.substring(0, 40)}${stepText.length > 40 ? '...' : ''}"`;
+    showStepScrollFeedback(stepDescription, false);
+  }
+}
+// ==========================================
+// FUNCIÓN DE SCROLL A FLUJO COMPLETO (FALLBACK)
+// ==========================================
+function scrollToFlowInOutput() {
+  const currentFlowName = state.flows[state.currentFlow].name;
+  const outputPanel = document.querySelector('.panel.output');
+  const outputElement = document.getElementById('output');
+  
+  if (!outputPanel || !outputElement) {
+    console.warn('No se encontró el panel de salida');
+    return;
+  }
+  
+  // Buscar el texto del flujo en el output
+  const outputContent = outputElement.innerHTML;
+  
+  // Patrón para encontrar el flujo (considerando flujo único o múltiple)
+  const flowPatterns = [
+    new RegExp(`<span class="output-section">${escapeRegex(currentFlowName)}:</span>`, 'i'),
+    new RegExp(`<span class="output-section">Flujo principal:</span>`, 'i') // Para flujo único
+  ];
+  
+  let match = null;
+  for (const pattern of flowPatterns) {
+    match = pattern.exec(outputContent);
+    if (match) break;
+  }
+  
+  if (match) {
+    // Crear un elemento temporal para medir la posición
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = outputContent.substring(0, match.index);
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.visibility = 'hidden';
+    tempDiv.style.whiteSpace = 'pre-wrap';
+    tempDiv.style.fontFamily = outputElement.style.fontFamily || "'Consolas', 'Monaco', 'Courier New', monospace";
+    tempDiv.style.fontSize = outputElement.style.fontSize || '14px';
+    tempDiv.style.lineHeight = outputElement.style.lineHeight || '1.6';
+    tempDiv.style.width = outputElement.offsetWidth + 'px';
+    
+    document.body.appendChild(tempDiv);
+    
+    // Calcular la altura hasta el flujo
+    const targetHeight = tempDiv.offsetHeight;
+    
+    // Limpiar elemento temporal
+    document.body.removeChild(tempDiv);
+    
+    // Hacer scroll al panel - flujo al inicio
+    outputPanel.scrollTo({
+      top: Math.max(0, targetHeight), // Sin margen - flujo al inicio del panel
+      behavior: 'smooth'
+    });
+    
+    // Mostrar feedback visual
+    showScrollFeedback(currentFlowName, true, 'flow');
+  } else {
+    // Si no se encuentra el flujo, hacer scroll al inicio
+    outputPanel.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+    
+    showScrollFeedback(currentFlowName, false, 'flow');
+  }
+}
+
+// Función auxiliar para escapar caracteres especiales en regex
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Mostrar feedback visual específico para pasos
+function showStepScrollFeedback(stepDescription, found = true) {
+  const outputPanel = document.querySelector('.panel.output');
+  if (!outputPanel) return;
+  
+  // Calcular la posición del panel
+  const panelRect = outputPanel.getBoundingClientRect();
+  
+  // Posicionar la notificación DENTRO del panel derecho, en el borde izquierdo
+  const textPosition = panelRect.top + 30; // 30px desde el top del panel visible
+  const leftPosition = panelRect.left + 20; // 20px DENTRO del panel derecho
+  
+  // Crear elemento de feedback
+  const feedback = document.createElement('div');
+  feedback.style.cssText = `
+    position: fixed;
+    top: ${textPosition}px;
+    left: ${leftPosition}px;
+    background: ${found ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #f59e0b, #d97706)'};
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 240px;
+    text-align: left;
+    line-height: 1.2;
+    transform: translateY(-10px);
+  `;
+  
+  // Sin flecha, ya que está dentro del panel
+  feedback.innerHTML = `
+    ${found ? '🔄 <strong>Aquí:</strong>' : '🔍 <strong>No visible:</strong>'}<br><span style="font-size: 10px;">${stepDescription}</span>
+  `;
+  
+  document.body.appendChild(feedback);
+  
+  // Animar entrada
+  setTimeout(() => {
+    feedback.style.opacity = '1';
+    feedback.style.transform = 'translateY(0)';
+  }, 10);
+  
+  // Remover después de 3 segundos
+  setTimeout(() => {
+    feedback.style.opacity = '0';
+    feedback.style.transform = 'translateY(-10px)';
+    setTimeout(() => {
+      if (feedback.parentNode) {
+        feedback.parentNode.removeChild(feedback);
+      }
+    }, 300);
+  }, 3000);
+}
+
+// ==========================================
 // GESTIÓN DE FLUJOS
 // ==========================================
 function addFlow() {
@@ -171,6 +367,7 @@ function renderSteps() {
           <button class="step-btn" onclick="duplicateStep(${index})" title="Duplicar">📄</button>
           ${index > 0 ? `<button class="step-btn" onclick="moveStep(${index}, -1)" title="Subir">↑</button>` : ''}
           ${index < currentFlow.steps.length - 1 ? `<button class="step-btn" onclick="moveStep(${index}, 1)" title="Bajar">↓</button>` : ''}
+          <button class="step-btn" onclick="scrollToStepInOutput(${index})" title="Ir a este paso específico en el resultado" style="background: #059669; color: white;">📍</button>
           <button class="step-btn btn-danger" onclick="removeStep(${index})" title="Eliminar">×</button>
         </div>
       </div>

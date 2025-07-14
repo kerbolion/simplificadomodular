@@ -42,6 +42,234 @@ function moveSection(direction) {
 }
 
 // ==========================================
+// FUNCIÓN DE SCROLL PRECISO A CAMPO ESPECÍFICO
+// ==========================================
+function scrollToFieldInOutput(fieldIndex) {
+  const currentSection = state.sections[state.currentSection];
+  const field = currentSection.fields[fieldIndex];
+  
+  if (!field) {
+    console.warn('Campo no encontrado');
+    return;
+  }
+  
+  const outputPanel = document.querySelector('.panel.output');
+  const outputElement = document.getElementById('output');
+  
+  if (!outputPanel || !outputElement) {
+    console.warn('No se encontró el panel de salida');
+    return;
+  }
+  
+  // Buscar el contenido específico del campo en el output
+  let searchPatterns = [];
+  let fieldDescription = '';
+  
+  if (field.type === 'h1' || field.type === 'h2' || field.type === 'h3') {
+    // Para encabezados, buscar el texto exacto
+    if (field.value && field.value.trim()) {
+      const escapedValue = escapeRegex(field.value.trim());
+      searchPatterns.push(new RegExp(`<span class="output-${field.type}">${escapedValue}</span>`, 'i'));
+      fieldDescription = `${field.type.toUpperCase()}: "${field.value.trim()}"`;
+    }
+  } else if (field.type === 'text' && field.items) {
+    // Para campos de texto, buscar el primer item no vacío
+    const firstItem = field.items.find(item => item.trim());
+    if (firstItem) {
+      const escapedItem = escapeRegex(firstItem.trim());
+      searchPatterns.push(new RegExp(`- ${escapedItem}`, 'i'));
+      fieldDescription = `${field.label}: "${firstItem.trim()}"`;
+    }
+  } else if (field.type === 'textarea' && field.value) {
+    // Para textarea, buscar el texto completo
+    const escapedValue = escapeRegex(field.value.trim());
+    searchPatterns.push(new RegExp(escapedValue, 'i'));
+    fieldDescription = `${field.label}: "${field.value.trim().substring(0, 30)}${field.value.trim().length > 30 ? '...' : ''}"`;
+  } else if (field.type === 'list' && field.items) {
+    // Para listas, buscar el primer item no vacío
+    const firstItem = field.items.find(item => item.trim());
+    if (firstItem) {
+      const escapedItem = escapeRegex(firstItem.trim());
+      searchPatterns.push(new RegExp(`<span class="output-step-number">1\\.</span> ${escapedItem}`, 'i'));
+      fieldDescription = `${field.label}: "${firstItem.trim()}"`;
+    }
+  }
+  
+  // Si no hay patrones, intentar buscar por el label de la sección
+  if (searchPatterns.length === 0) {
+    const sectionName = currentSection.name;
+    const escapedSection = escapeRegex(sectionName);
+    searchPatterns.push(new RegExp(`<span class="output-section">${escapedSection}:</span>`, 'i'));
+    fieldDescription = `Sección: "${sectionName}"`;
+  }
+  
+  const outputContent = outputElement.innerHTML;
+  let match = null;
+  
+  // Intentar cada patrón hasta encontrar una coincidencia
+  for (const pattern of searchPatterns) {
+    match = pattern.exec(outputContent);
+    if (match) break;
+  }
+  
+  if (match) {
+    // Crear un elemento temporal para medir la posición
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = outputContent.substring(0, match.index);
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.visibility = 'hidden';
+    tempDiv.style.whiteSpace = 'pre-wrap';
+    tempDiv.style.fontFamily = outputElement.style.fontFamily || "'Consolas', 'Monaco', 'Courier New', monospace";
+    tempDiv.style.fontSize = outputElement.style.fontSize || '14px';
+    tempDiv.style.lineHeight = outputElement.style.lineHeight || '1.6';
+    tempDiv.style.width = outputElement.offsetWidth + 'px';
+    
+    document.body.appendChild(tempDiv);
+    
+    // Calcular la altura hasta el campo específico
+    const targetHeight = tempDiv.offsetHeight;
+    
+    // Limpiar elemento temporal
+    document.body.removeChild(tempDiv);
+    
+    // Hacer scroll al panel - elemento al inicio (sin margen)
+    outputPanel.scrollTo({
+      top: Math.max(0, targetHeight), // Sin margen - elemento al inicio del panel
+      behavior: 'smooth'
+    });
+    
+    // Mostrar feedback visual específico
+    showFieldScrollFeedback(fieldDescription, true);
+  } else {
+    // Si no se encuentra el campo, hacer scroll al inicio de la sección
+    scrollToSectionInOutput();
+    showFieldScrollFeedback(fieldDescription, false);
+  }
+}
+
+// ==========================================
+// FUNCIÓN DE SCROLL A SECCIÓN COMPLETA (FALLBACK)
+// ==========================================
+function scrollToSectionInOutput() {
+  const currentSectionName = state.sections[state.currentSection].name;
+  const outputPanel = document.querySelector('.panel.output');
+  const outputElement = document.getElementById('output');
+  
+  if (!outputPanel || !outputElement) {
+    console.warn('No se encontró el panel de salida');
+    return;
+  }
+  
+  // Buscar el texto de la sección en el output
+  const outputContent = outputElement.innerHTML;
+  const sectionPattern = new RegExp(`<span class="output-section">${escapeRegex(currentSectionName)}:</span>`, 'i');
+  const match = sectionPattern.exec(outputContent);
+  
+  if (match) {
+    // Crear un elemento temporal para medir la posición
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = outputContent.substring(0, match.index);
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.visibility = 'hidden';
+    tempDiv.style.whiteSpace = 'pre-wrap';
+    tempDiv.style.fontFamily = outputElement.style.fontFamily || "'Consolas', 'Monaco', 'Courier New', monospace";
+    tempDiv.style.fontSize = outputElement.style.fontSize || '14px';
+    tempDiv.style.lineHeight = outputElement.style.lineHeight || '1.6';
+    tempDiv.style.width = outputElement.offsetWidth + 'px';
+    
+    document.body.appendChild(tempDiv);
+    
+    // Calcular la altura hasta la sección
+    const targetHeight = tempDiv.offsetHeight;
+    
+    // Limpiar elemento temporal
+    document.body.removeChild(tempDiv);
+    
+    // Hacer scroll al panel - sección al inicio
+    outputPanel.scrollTo({
+      top: Math.max(0, targetHeight), // Sin margen - sección al inicio del panel
+      behavior: 'smooth'
+    });
+    
+    // Mostrar feedback visual
+    showFieldScrollFeedback(`Sección: "${currentSectionName}"`, true);
+  } else {
+    // Si no se encuentra la sección, hacer scroll al inicio
+    outputPanel.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+    
+    showFieldScrollFeedback(`Sección: "${currentSectionName}"`, false);
+  }
+}
+
+// Función auxiliar para escapar caracteres especiales en regex
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Mostrar feedback visual específico para campos
+function showFieldScrollFeedback(fieldDescription, found = true) {
+  const outputPanel = document.querySelector('.panel.output');
+  const outputElement = document.getElementById('output');
+  if (!outputPanel || !outputElement) return;
+  
+  // Calcular la posición del panel
+  const panelRect = outputPanel.getBoundingClientRect();
+  
+  // Posicionar la notificación DENTRO del panel derecho, en el borde izquierdo
+  const textPosition = panelRect.top + 30; // 30px desde el top del panel visible
+  const leftPosition = panelRect.left + 20; // 20px DENTRO del panel derecho
+  
+  // Crear elemento de feedback
+  const feedback = document.createElement('div');
+  feedback.style.cssText = `
+    position: fixed;
+    top: ${textPosition}px;
+    left: ${leftPosition}px;
+    background: ${found ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #f59e0b, #d97706)'};
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 240px;
+    text-align: left;
+    line-height: 1.2;
+    transform: translateY(-10px);
+  `;
+  
+  // Sin flecha, ya que está dentro del panel
+  feedback.innerHTML = `
+    ${found ? '📍 <strong>Aquí:</strong>' : '🔍 <strong>No visible:</strong>'}<br><span style="font-size: 10px;">${fieldDescription}</span>
+  `;
+  
+  document.body.appendChild(feedback);
+  
+  // Animar entrada
+  setTimeout(() => {
+    feedback.style.opacity = '1';
+    feedback.style.transform = 'translateY(0)';
+  }, 10);
+  
+  // Remover después de 3 segundos
+  setTimeout(() => {
+    feedback.style.opacity = '0';
+    feedback.style.transform = 'translateY(-10px)';
+    setTimeout(() => {
+      if (feedback.parentNode) {
+        feedback.parentNode.removeChild(feedback);
+      }
+    }, 300);
+  }, 3000);
+}
+
+// ==========================================
 // GESTIÓN DE PESTAÑAS
 // ==========================================
 function showTab(index) {
@@ -397,6 +625,7 @@ function renderSectionContent() {
       <div class="step-controls">
         ${fieldIndex > 0 ? `<button class="step-btn" onclick="moveField(${fieldIndex}, -1)" title="Subir">↑</button>` : ''}
         ${fieldIndex < currentSection.fields.length - 1 ? `<button class="step-btn" onclick="moveField(${fieldIndex}, 1)" title="Bajar">↓</button>` : ''}
+        <button class="step-btn" onclick="scrollToFieldInOutput(${fieldIndex})" title="Ir a este campo específico en el resultado" style="background: #6366f1; color: white;">📍</button>
         <button class="step-btn btn-danger" onclick="removeField(${fieldIndex})" title="Eliminar">×</button>
       </div>
     `;
