@@ -856,6 +856,7 @@ const projects = {
     selector.innerHTML = '<option value="">Seleccionar versión...</option>';
     
     if (!this.current || !this.saved[this.current]) {
+      this.renderVersionControls();
       return;
     }
 
@@ -872,30 +873,18 @@ const projects = {
       selector.appendChild(option);
     });
 
-    // Agregar botones de gestión de versiones si hay más de una versión
+    // Renderizar controles de versiones
     this.renderVersionControls();
   },
 
-  // Renderizar controles de versiones
+  // Renderizar controles de versiones - MOVIDOS A MAIN PROJECT CONTROLS
   renderVersionControls() {
-    // Buscar si ya existe el contenedor de controles
-    let controlsContainer = document.getElementById('version-controls');
-    
-    if (!controlsContainer) {
-      // Crear el contenedor de controles de versiones
-      controlsContainer = document.createElement('div');
-      controlsContainer.id = 'version-controls';
-      controlsContainer.style.marginTop = '8px';
-      
-      // Insertar después del selector de versiones
-      const versionSelector = document.getElementById('version-selector');
-      if (versionSelector && versionSelector.parentNode) {
-        versionSelector.parentNode.appendChild(controlsContainer);
-      }
-    }
+    const mainControls = document.getElementById('main-project-controls');
+    if (!mainControls) return;
 
-    // Limpiar controles existentes
-    controlsContainer.innerHTML = '';
+    // Remover botones de versiones existentes
+    const existingVersionButtons = mainControls.querySelectorAll('.version-btn');
+    existingVersionButtons.forEach(btn => btn.remove());
 
     if (!this.current || !this.saved[this.current]) {
       return;
@@ -905,13 +894,24 @@ const projects = {
     const versionCount = Object.keys(project.versions || {}).length;
 
     if (versionCount > 1) {
-      controlsContainer.innerHTML = `
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" class="btn-small btn-danger" onclick="projects.deleteVersion()" title="Eliminar versión actual">🗑️ Eliminar Versión</button>
-          <button type="button" class="btn-small btn-warning" onclick="projects.deleteMultipleVersions()" title="Seleccionar versiones para eliminar">☑️ Seleccionar para Eliminar</button>
-          <span style="font-size: 12px; color: var(--text-secondary); align-self: center;">${versionCount} versiones</span>
-        </div>
-      `;
+      // Crear botones de versiones
+      const deleteVersionBtn = document.createElement('button');
+      deleteVersionBtn.type = 'button';
+      deleteVersionBtn.className = 'btn-small btn-danger version-btn';
+      deleteVersionBtn.onclick = () => this.deleteVersion();
+      deleteVersionBtn.title = 'Eliminar versión actual';
+      deleteVersionBtn.innerHTML = '🗑️ Eliminar Versión';
+
+      const selectVersionsBtn = document.createElement('button');
+      selectVersionsBtn.type = 'button';
+      selectVersionsBtn.className = 'btn-small btn-warning version-btn';
+      selectVersionsBtn.onclick = () => this.deleteMultipleVersions();
+      selectVersionsBtn.title = 'Seleccionar versiones para eliminar';
+      selectVersionsBtn.innerHTML = '☑️ Seleccionar';
+
+      // Agregar los botones al contenedor principal
+      mainControls.appendChild(deleteVersionBtn);
+      mainControls.appendChild(selectVersionsBtn);
     }
   },
 

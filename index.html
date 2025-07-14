@@ -38,11 +38,12 @@
             <input type="text" id="project-name" placeholder="Nombre del proyecto">
           </div>
         </div>
-        <div class="project-controls">
+        <div class="project-controls" id="main-project-controls">
           <button type="button" class="btn-small" onclick="projects.saveProject()">💾 Guardar</button>
           <button type="button" class="btn-small btn-danger" onclick="projects.deleteProject()">🗑️ Eliminar</button>
           <button type="button" class="btn-small" onclick="projects.exportProject()">📤 Exportar</button>
           <button type="button" class="btn-small" onclick="projects.importProject()">📥 Importar</button>
+          <!-- Los botones de versiones se agregarán aquí dinámicamente -->
         </div>
       </div>
       
