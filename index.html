@@ -2,6 +2,7 @@
 <html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generador de Flujo Conversacional IA</title>
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
@@ -10,7 +11,7 @@
   <script defer src="https://widget.tochat.be/bundle.js?key=d6f03efb-00ec-4df4-a054-95cbc04019b8"></script>
 </head>
 <body>
-  <button class="theme-toggle" onclick="toggleTheme()"></button>
+  <button class="theme-toggle" onclick="ThemeUtils.toggleTheme()"></button>
   
   <div class="container">
     <!-- Panel de configuración -->
@@ -53,6 +54,7 @@
         <button class="tab" onclick="showTab(1)">🔄 Flujos</button>
         <button class="tab" onclick="showTab(2)">❓ FAQ</button>
         <button class="tab" onclick="showTab(3)">⚡ Funciones</button>
+        <!-- La pestaña de ordenamiento se agrega dinámicamente -->
       </div>
 
       <!-- Configuración Básica -->
@@ -70,16 +72,15 @@
           <div class="form-row">
             <div class="form-group">
               <label>Sección actual:</label>
-              <select id="section-selector" onchange="changeSection()"></select>
+              <select id="section-selector" onchange="sectionManager.changeSection()"></select>
             </div>
             <div class="form-group">
               <label>Nombre:</label>
-              <input type="text" id="section-name" onblur="renameSection()" placeholder="Nombre de la sección...">
+              <input type="text" id="section-name" onblur="sectionManager.renameSection()" placeholder="Nombre de la sección...">
             </div>
           </div>
           <div class="form-row" id="section-controls">
-            <button type="button" class="btn-small" onclick="addSection()">➕ Nueva Sección</button>
-            <button type="button" class="btn-small btn-danger" onclick="deleteSection()">🗑️ Eliminar</button>
+            <!-- Los controles se renderizan dinámicamente -->
           </div>
         </div>
 
@@ -87,10 +88,10 @@
           <h3>Contenido de la Sección:</h3>
           <div id="section-content-container"></div>
           <div class="form-row">
-            <button type="button" class="btn-small" onclick="addField('header')" style="background: linear-gradient(90deg, #6366f1, #8b5cf6); color: white;">📰 Encabezado</button>
-            <button type="button" class="btn-small" onclick="addField('text')">➕ Campo de Texto</button>
-            <button type="button" class="btn-small" onclick="addField('textarea')">➕ Área de Texto</button>
-            <button type="button" class="btn-small" onclick="addField('list')">➕ Lista</button>
+            <button type="button" class="btn-small" onclick="sectionManager.addField('header')" style="background: linear-gradient(90deg, #6366f1, #8b5cf6); color: white;">📰 Encabezado</button>
+            <button type="button" class="btn-small" onclick="sectionManager.addField('text')">➕ Campo de Texto</button>
+            <button type="button" class="btn-small" onclick="sectionManager.addField('textarea')">➕ Área de Texto</button>
+            <button type="button" class="btn-small" onclick="sectionManager.addField('list')">➕ Lista</button>
           </div>
         </div>
       </div>
@@ -102,23 +103,22 @@
           <div class="form-row">
             <div class="form-group">
               <label>Flujo actual:</label>
-              <select id="flow-selector" onchange="changeFlow()"></select>
+              <select id="flow-selector" onchange="flowManager.changeFlow()"></select>
             </div>
             <div class="form-group">
               <label>Nombre:</label>
-              <input type="text" id="flow-name" onblur="renameFlow()" placeholder="Nombre del flujo...">
+              <input type="text" id="flow-name" onblur="flowManager.renameFlow()" placeholder="Nombre del flujo...">
             </div>
           </div>
           <div class="form-row" id="flow-controls">
-            <button type="button" class="btn-small" onclick="addFlow()">➕ Nuevo Flujo</button>
-            <button type="button" class="btn-small btn-danger" onclick="deleteFlow()">🗑️ Eliminar</button>
+            <!-- Los controles se renderizan dinámicamente -->
           </div>
         </div>
 
         <div>
           <h3>Pasos del Flujo:</h3>
           <div id="steps-container"></div>
-          <button type="button" onclick="addStep()">➕ Agregar Paso</button>
+          <button type="button" onclick="flowManager.addStep()">➕ Agregar Paso</button>
         </div>
       </div>
 
@@ -127,7 +127,7 @@
         <div class="section">
           <h3>❓ Preguntas Frecuentes</h3>
           <div id="faq-container" class="dynamic-list"></div>
-          <button type="button" class="btn-small" onclick="addFAQ()">➕ Agregar FAQ</button>
+          <button type="button" class="btn-small" onclick="faqManager.addFAQ()">➕ Agregar FAQ</button>
         </div>
       </div>
 
@@ -140,11 +140,13 @@
           <button type="button" class="btn-small" onclick="functions.loadDefaults()">🔄 Cargar Predeterminadas</button>
         </div>
       </div>
+
+      <!-- Pestaña de Ordenamiento Global (se agrega dinámicamente) -->
     </div>
 
     <!-- Panel de salida -->
     <div class="panel output">
-      <button class="copy-btn" onclick="copyPrompt(event)">
+      <button class="copy-btn" onclick="CopyUtils.copyPrompt(event)">
         <span>📋</span>
         <span>Copiar</span>
       </button>
@@ -152,12 +154,14 @@
     </div>
   </div>
 
-  <!-- Scripts Core -->
+  <!-- Scripts optimizados -->
+  <!-- Core -->
+  <script src="config/defaults.js"></script>
   <script src="js/core/state.js"></script>
   <script src="js/core/utils.js"></script>
   <script src="js/core/events.js"></script>
   
-  <!-- Scripts Modules -->
+  <!-- Modules -->
   <script src="js/modules/functions.js"></script>
   <script src="js/modules/projects.js"></script>
   <script src="js/modules/sections.js"></script>
@@ -165,16 +169,9 @@
   <script src="js/modules/faqs.js"></script>
   <script src="js/modules/prompts.js"></script>
   <script src="js/modules/step-functions.js"></script>
-  
-  <!-- Scripts UI -->
-  <script src="js/ui/keyboard.js"></script>
-  <script src="js/ui/render.js"></script>
-  <script src="js/ui/themes.js"></script>
-  <script src="js/ui/autoresize.js"></script>
-
-  <!-- Scripts para Ordenamiento Global -->
   <script src="js/modules/global-ordering.js"></script>
+  
+  <!-- UI -->
   <script src="js/ui/global-ordering-ui.js"></script>
-  <script src="js/core/global-ordering-prompt.js"></script>
 </body>
 </html>

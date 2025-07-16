@@ -1,98 +1,90 @@
 // ==========================================
-// INTERFAZ DE USUARIO PARA ORDENAMIENTO GLOBAL CON VISIBILIDAD
+// INTERFAZ DE USUARIO PARA ORDENAMIENTO GLOBAL OPTIMIZADA
 // ==========================================
 
-// Renderizar la pestaña de ordenamiento global (SIEMPRE VISIBLE)
-function renderGlobalOrderTab() {
-  // Buscar si existe la pestaña de ordenamiento
-  let orderingTab = document.querySelector('.tab[data-tab="ordering"]');
-  let orderingContent = document.getElementById('tab-ordering');
-  
-  // Crear pestaña si no existe (SIEMPRE)
-  if (!orderingTab) {
-    const tabsContainer = document.querySelector('.tabs');
-    orderingTab = document.createElement('button');
-    orderingTab.className = 'tab';
-    orderingTab.setAttribute('data-tab', 'ordering');
-    orderingTab.onclick = () => showTab('ordering');
-    orderingTab.innerHTML = '📋 Orden';
-    tabsContainer.appendChild(orderingTab);
+class GlobalOrderingUI {
+  constructor() {
+    this.draggedElement = null;
+    this.draggedIndex = null;
   }
-  
-  // Crear contenido si no existe (SIEMPRE)
-  if (!orderingContent) {
-    orderingContent = document.createElement('div');
-    orderingContent.className = 'tab-content';
-    orderingContent.id = 'tab-ordering';
-    
-    const lastTabContent = document.querySelector('#tab-3');
-    if (lastTabContent && lastTabContent.parentNode) {
-      lastTabContent.parentNode.appendChild(orderingContent);
-    }
-  }
-  
-  // Actualizar contenido
-  orderingContent.innerHTML = `
-    <div class="section">
-      <h3>📋 Orden Global de Elementos</h3>
-      <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
-        Arrastra y reorganiza los elementos para cambiar el orden en el que aparecen en el prompt final. 
-        Usa el ojo para ocultar/mostrar elementos en el prompt.
-      </p>
-      
-      <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
-        <button type="button" class="btn-small" onclick="resetGlobalOrder()">🔄 Restablecer Orden</button>
-        <button type="button" class="btn-small" onclick="toggleAllElementsVisibility()">👁️ Mostrar/Ocultar Todo</button>
-        <span style="font-size: 13px; color: var(--text-accent); align-self: center; background: var(--text-accent)20; padding: 4px 8px; border-radius: 4px; font-weight: 600;">
-          ✅ Orden personalizado activo
-        </span>
-      </div>
-      
-      <div id="global-order-container"></div>
-    </div>
-  `;
-  
-  renderGlobalOrder();
-}
 
-// Renderizar lista de elementos en orden global
-function renderGlobalOrder() {
-  const container = document.getElementById('global-order-container');
-  if (!container || !state.globalOrder) return;
-  
-  container.innerHTML = state.globalOrder.map((item, index) => {
-    const element = getElementByTypeAndId(item.type, item.id);
+  // ==========================================
+  // RENDERIZADO PRINCIPAL
+  // ==========================================
+
+  renderTab() {
+    let orderingTab = document.querySelector('.tab[data-tab="ordering"]');
+    let orderingContent = document.getElementById('tab-ordering');
+    
+    // Crear pestaña si no existe
+    if (!orderingTab) {
+      const tabsContainer = document.querySelector('.tabs');
+      orderingTab = document.createElement('button');
+      orderingTab.className = 'tab';
+      orderingTab.setAttribute('data-tab', 'ordering');
+      orderingTab.onclick = () => this.showTab();
+      orderingTab.innerHTML = '📋 Orden';
+      tabsContainer.appendChild(orderingTab);
+    }
+    
+    // Crear contenido si no existe
+    if (!orderingContent) {
+      orderingContent = document.createElement('div');
+      orderingContent.className = 'tab-content';
+      orderingContent.id = 'tab-ordering';
+      
+      const lastTabContent = document.querySelector('#tab-3');
+      if (lastTabContent && lastTabContent.parentNode) {
+        lastTabContent.parentNode.appendChild(orderingContent);
+      }
+    }
+    
+    // Actualizar contenido
+    orderingContent.innerHTML = this.generateTabContent();
+    this.renderOrder();
+  }
+
+  generateTabContent() {
+    return `
+      <div class="section">
+        <h3>📋 Orden Global de Elementos</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
+          Arrastra y reorganiza los elementos para cambiar el orden en el que aparecen en el prompt final. 
+          Usa el ojo para ocultar/mostrar elementos en el prompt.
+        </p>
+        
+        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+          <button type="button" class="btn-small" onclick="globalOrderingUI.resetOrder()">🔄 Restablecer Orden</button>
+          <button type="button" class="btn-small" onclick="globalOrderingUI.toggleAllVisibility()">👁️ Mostrar/Ocultar Todo</button>
+          <span style="font-size: 13px; color: var(--text-accent); align-self: center; background: var(--text-accent)20; padding: 4px 8px; border-radius: 4px; font-weight: 600;">
+            ✅ Orden personalizado activo
+          </span>
+        </div>
+        
+        <div id="global-order-container"></div>
+      </div>
+    `;
+  }
+
+  renderOrder() {
+    const container = document.getElementById('global-order-container');
+    if (!container || !state.globalOrder) return;
+    
+    container.innerHTML = state.globalOrder.map((item, index) => 
+      this.renderOrderItem(item, index)
+    ).join('');
+    
+    this.initializeDragAndDrop();
+  }
+
+  renderOrderItem(item, index) {
+    const element = globalOrderingManager.getElementByTypeAndId(item.type, item.id);
     if (!element && item.type !== 'faqs') return '';
     
-    // Configuración por tipo de elemento
-    const typeConfig = {
-      'section': { icon: '📄', color: '#6366f1', label: 'Sección' },
-      'flow': { icon: '🔄', color: '#059669', label: 'Flujo' },
-      'faqs': { icon: '❓', color: '#f59e0b', label: 'FAQ' }
-    };
-    
-    const config = typeConfig[item.type] || { icon: '📄', color: '#6b7280', label: 'Elemento' };
-    
-    // Obtener nombre del elemento
-    let elementName = item.name;
-    if (item.type === 'section' && element) {
-      elementName = element.name;
-    } else if (item.type === 'flow' && element) {
-      elementName = element.name;
-    }
-    
-    // Información adicional
-    let additionalInfo = '';
-    if (item.type === 'section' && element) {
-      additionalInfo = `${element.fields.length} campos`;
-    } else if (item.type === 'flow' && element) {
-      additionalInfo = `${element.steps.length} pasos`;
-    } else if (item.type === 'faqs') {
-      additionalInfo = `${state.faqs.length} preguntas`;
-    }
-    
-    // Verificar si el elemento está visible
-    const isVisible = item.visible !== false; // Por defecto visible
+    const config = this.getTypeConfig(item.type);
+    const elementName = this.getElementName(item, element);
+    const additionalInfo = this.getAdditionalInfo(item.type, element);
+    const isVisible = item.visible !== false;
     
     return `
       <div class="global-order-item ${!isVisible ? 'hidden-element' : ''}" data-index="${index}" 
@@ -106,7 +98,7 @@ function renderGlobalOrder() {
             
             <div style="flex: 1;">
               <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 2px; ${!isVisible ? 'text-decoration: line-through;' : ''}">
-                ${escapeHtml(elementName)}
+                ${TextUtils.escapeHtml(elementName)}
                 ${!isVisible ? ' <span style="color: var(--text-secondary); font-size: 12px;">(Oculto)</span>' : ''}
               </div>
               <div style="font-size: 12px; color: var(--text-secondary);">
@@ -121,17 +113,7 @@ function renderGlobalOrder() {
             </div>
           </div>
           
-          <div class="step-controls" style="margin-left: 16px;">
-            ${index > 0 ? `<button class="step-btn" onclick="moveGlobalElementUp(${index})" title="Subir">↑</button>` : ''}
-            ${index < state.globalOrder.length - 1 ? `<button class="step-btn" onclick="moveGlobalElementDown(${index})" title="Bajar">↓</button>` : ''}
-            <button class="step-btn" onclick="toggleElementVisibility(${index})" title="${isVisible ? 'Ocultar elemento' : 'Mostrar elemento'}" 
-                    style="background: ${isVisible ? '#ef4444' : '#10b981'}; color: white;">
-              ${isVisible ? '👁️' : '🙈'}
-            </button>
-            <button class="step-btn" onclick="goToElement('${item.type}', ${item.id})" title="Ir al elemento" style="background: ${config.color}; color: white;">
-              ➡️
-            </button>
-          </div>
+          ${this.renderItemControls(index, isVisible, item)}
         </div>
         
         <div class="drag-handle" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); cursor: grab; font-size: 12px;">
@@ -139,171 +121,225 @@ function renderGlobalOrder() {
         </div>
       </div>
     `;
-  }).join('');
-  
-  // Inicializar drag and drop
-  initializeDragAndDrop();
-}
+  }
 
-// ==========================================
-// FUNCIONES DE VISIBILIDAD
-// ==========================================
+  renderItemControls(index, isVisible, item) {
+    const config = this.getTypeConfig(item.type);
+    
+    return `
+      <div class="step-controls" style="margin-left: 16px;">
+        ${index > 0 ? `<button class="step-btn" onclick="globalOrderingUI.moveUp(${index})" title="Subir">↑</button>` : ''}
+        ${index < state.globalOrder.length - 1 ? `<button class="step-btn" onclick="globalOrderingUI.moveDown(${index})" title="Bajar">↓</button>` : ''}
+        <button class="step-btn" onclick="globalOrderingUI.toggleVisibility(${index})" title="${isVisible ? 'Ocultar elemento' : 'Mostrar elemento'}" 
+                style="background: ${isVisible ? '#ef4444' : '#10b981'}; color: white;">
+          ${isVisible ? '👁️' : '🙈'}
+        </button>
+        <button class="step-btn" onclick="globalOrderingUI.goToElement('${item.type}', ${item.id})" title="Ir al elemento" style="background: ${config.color}; color: white;">
+          ➡️
+        </button>
+      </div>
+    `;
+  }
 
-// Alternar visibilidad de un elemento específico
-function toggleElementVisibility(index) {
-  if (!state.globalOrder || index < 0 || index >= state.globalOrder.length) return;
-  
-  const item = state.globalOrder[index];
-  item.visible = item.visible !== false ? false : true; // Toggle visibility
-  
-  // Actualizar UI y prompt
-  renderGlobalOrder();
-  updatePrompt();
-  scheduleAutoSave();
-}
+  // ==========================================
+  // DRAG AND DROP
+  // ==========================================
 
-// Alternar visibilidad de todos los elementos
-function toggleAllElementsVisibility() {
-  if (!state.globalOrder) return;
-  
-  // Verificar si hay elementos ocultos
-  const hasHiddenElements = state.globalOrder.some(item => item.visible === false);
-  
-  if (hasHiddenElements) {
-    // Si hay elementos ocultos, mostrar todos
-    state.globalOrder.forEach(item => {
-      item.visible = true;
-    });
-  } else {
-    // Si todos están visibles, ocultar todos excepto el primero
-    state.globalOrder.forEach((item, index) => {
-      item.visible = index === 0; // Solo el primer elemento visible
+  initializeDragAndDrop() {
+    const container = document.getElementById('global-order-container');
+    if (!container) return;
+    
+    container.querySelectorAll('.global-order-item').forEach((item, index) => {
+      item.draggable = true;
+      
+      item.addEventListener('dragstart', (e) => this.handleDragStart(e, item, index));
+      item.addEventListener('dragend', (e) => this.handleDragEnd(e, item));
+      item.addEventListener('dragover', (e) => this.handleDragOver(e));
+      item.addEventListener('dragenter', (e) => this.handleDragEnter(e, item));
+      item.addEventListener('dragleave', (e) => this.handleDragLeave(e, item));
+      item.addEventListener('drop', (e) => this.handleDrop(e, item));
     });
   }
-  
-  // Actualizar UI y prompt
-  renderGlobalOrder();
-  updatePrompt();
-  scheduleAutoSave();
-}
 
-// Verificar si un elemento está visible
-function isElementVisible(type, id) {
-  if (!state.globalOrder) return true;
-  
-  const item = state.globalOrder.find(item => 
-    item.type === type && item.id === id
-  );
-  
-  return item ? (item.visible !== false) : true;
-}
+  handleDragStart(e, item, index) {
+    this.draggedElement = item;
+    this.draggedIndex = parseInt(item.dataset.index);
+    item.style.opacity = '0.3';
+    item.style.transform = 'scale(0.95)';
+    e.dataTransfer.effectAllowed = 'move';
+  }
 
-// ==========================================
-// FUNCIONES EXISTENTES ACTUALIZADAS
-// ==========================================
+  handleDragEnd(e, item) {
+    item.style.opacity = '';
+    item.style.transform = '';
+    this.draggedElement = null;
+    this.draggedIndex = null;
+  }
 
-// Inicializar funcionalidad de drag and drop
-function initializeDragAndDrop() {
-  const container = document.getElementById('global-order-container');
-  if (!container) return;
-  
-  let draggedElement = null;
-  let draggedIndex = null;
-  
-  // Agregar event listeners a los elementos
-  container.querySelectorAll('.global-order-item').forEach((item, index) => {
-    item.draggable = true;
+  handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }
+
+  handleDragEnter(e, item) {
+    e.preventDefault();
+    if (item !== this.draggedElement) {
+      item.style.borderColor = 'var(--text-accent)';
+      item.style.background = 'var(--text-accent)10';
+    }
+  }
+
+  handleDragLeave(e, item) {
+    item.style.borderColor = '';
+    item.style.background = '';
+  }
+
+  handleDrop(e, item) {
+    e.preventDefault();
+    item.style.borderColor = '';
+    item.style.background = '';
     
-    item.addEventListener('dragstart', (e) => {
-      draggedElement = item;
-      draggedIndex = parseInt(item.dataset.index);
-      item.style.opacity = '0.3';
-      item.style.transform = 'scale(0.95)';
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    
-    item.addEventListener('dragend', (e) => {
-      item.style.opacity = '';
-      item.style.transform = '';
-      draggedElement = null;
-      draggedIndex = null;
-    });
-    
-    item.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-    });
-    
-    item.addEventListener('dragenter', (e) => {
-      e.preventDefault();
-      if (item !== draggedElement) {
-        item.style.borderColor = 'var(--text-accent)';
-        item.style.background = 'var(--text-accent)10';
+    if (this.draggedElement && this.draggedElement !== item) {
+      const targetIndex = parseInt(item.dataset.index);
+      globalOrderingManager.moveElement(this.draggedIndex, targetIndex);
+    }
+  }
+
+  // ==========================================
+  // ACCIONES DE USUARIO
+  // ==========================================
+
+  moveUp(index) {
+    globalOrderingManager.moveElementUp(index);
+  }
+
+  moveDown(index) {
+    globalOrderingManager.moveElementDown(index);
+  }
+
+  toggleVisibility(index) {
+    globalOrderingManager.toggleElementVisibility(index);
+  }
+
+  toggleAllVisibility() {
+    globalOrderingManager.toggleAllElementsVisibility();
+  }
+
+  resetOrder() {
+    globalOrderingManager.resetOrder();
+  }
+
+  goToElement(type, id) {
+    switch (type) {
+      case 'section':
+        state.currentSection = id;
+        this.showTab(0);
+        if (window.sectionManager) {
+          sectionManager.renderSections();
+          sectionManager.renderSectionContent();
+        }
+        break;
+        
+      case 'flow':
+        state.currentFlow = id;
+        this.showTab(1);
+        if (window.flowManager) {
+          flowManager.renderFlows();
+          flowManager.renderSteps();
+        }
+        break;
+        
+      case 'faqs':
+        this.showTab(2);
+        break;
+    }
+  }
+
+  showTab(index = 'ordering') {
+    if (index === 'ordering') {
+      document.querySelectorAll('.tab').forEach((tab) => {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-content').forEach((content) => {
+        content.classList.remove('active');
+      });
+      
+      const orderingTab = document.querySelector('.tab[data-tab="ordering"]');
+      const orderingContent = document.getElementById('tab-ordering');
+      
+      if (orderingTab) orderingTab.classList.add('active');
+      if (orderingContent) orderingContent.classList.add('active');
+      
+      state.currentTab = 'ordering';
+    } else {
+      if (window.showTab) {
+        window.showTab(index);
       }
-    });
-    
-    item.addEventListener('dragleave', (e) => {
-      item.style.borderColor = '';
-      item.style.background = '';
-    });
-    
-    item.addEventListener('drop', (e) => {
-      e.preventDefault();
-      item.style.borderColor = '';
-      item.style.background = '';
-      
-      if (draggedElement && draggedElement !== item) {
-        const targetIndex = parseInt(item.dataset.index);
-        moveGlobalElement(draggedIndex, targetIndex);
-      }
-    });
-  });
-}
+    }
+  }
 
-// Ir al elemento específico
-function goToElement(type, id) {
-  switch (type) {
-    case 'section':
-      state.currentSection = id;
-      showTab(0); // Pestaña de configuración
-      renderSections();
-      renderSectionContent();
-      break;
-      
-    case 'flow':
-      state.currentFlow = id;
-      showTab(1); // Pestaña de flujos
-      renderFlows();
-      renderSteps();
-      break;
-      
-    case 'faqs':
-      showTab(2); // Pestaña de FAQs
-      break;
+  // ==========================================
+  // MÉTODOS DE UTILIDAD
+  // ==========================================
+
+  getTypeConfig(type) {
+    const configs = {
+      'section': { icon: '📄', color: '#6366f1', label: 'Sección' },
+      'flow': { icon: '🔄', color: '#059669', label: 'Flujo' },
+      'faqs': { icon: '❓', color: '#f59e0b', label: 'FAQ' }
+    };
+    
+    return configs[type] || { icon: '📄', color: '#6b7280', label: 'Elemento' };
+  }
+
+  getElementName(item, element) {
+    if (item.type === 'section' && element) {
+      return element.name;
+    } else if (item.type === 'flow' && element) {
+      return element.name;
+    }
+    return item.name;
+  }
+
+  getAdditionalInfo(type, element) {
+    if (type === 'section' && element) {
+      return `${element.fields.length} campos`;
+    } else if (type === 'flow' && element) {
+      return `${element.steps.length} pasos`;
+    } else if (type === 'faqs') {
+      return `${state.faqs.length} preguntas`;
+    }
+    return '';
   }
 }
+
+// Instancia global
+const globalOrderingUI = new GlobalOrderingUI();
+
+// Exportar globalmente
+window.globalOrderingUI = globalOrderingUI;
+
+// Funciones legacy para compatibilidad
+window.renderGlobalOrderTab = () => globalOrderingUI.renderTab();
+window.renderGlobalOrder = () => globalOrderingUI.renderOrder();
 
 // Modificar la función showTab existente para incluir la pestaña de ordenamiento
 const originalShowTab = window.showTab;
 window.showTab = function(index) {
   if (index === 'ordering') {
-    // Manejar pestaña de ordenamiento
-    document.querySelectorAll('.tab').forEach((tab) => {
-      tab.classList.remove('active');
-    });
-    document.querySelectorAll('.tab-content').forEach((content) => {
-      content.classList.remove('active');
-    });
-    
-    const orderingTab = document.querySelector('.tab[data-tab="ordering"]');
-    const orderingContent = document.getElementById('tab-ordering');
-    
-    if (orderingTab) orderingTab.classList.add('active');
-    if (orderingContent) orderingContent.classList.add('active');
-    
-    state.currentTab = 'ordering';
+    globalOrderingUI.showTab('ordering');
   } else {
-    // Usar función original para pestañas numéricas
-    originalShowTab(index);
+    if (originalShowTab) {
+      originalShowTab(index);
+    } else {
+      // Fallback si no existe la función original
+      document.querySelectorAll('.tab').forEach((tab, i) => {
+        tab.classList.toggle('active', i === index);
+      });
+      document.querySelectorAll('.tab-content').forEach((content, i) => {
+        content.classList.toggle('active', i === index);
+      });
+      state.currentTab = index;
+    }
   }
 };

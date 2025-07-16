@@ -1,39 +1,158 @@
-function moveFAQ(index, direction) {
-  const faqs = state.faqs;
-  const newIndex = index + direction;
-  
-  if (newIndex >= 0 && newIndex < faqs.length) {
-    // Intercambiar FAQs
-    [faqs[index], faqs[newIndex]] = [faqs[newIndex], faqs[index]];
-    
-    // Re-renderizar
-    renderFAQs();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-}
+// ==========================================
+// GESTIÓN DE FAQS OPTIMIZADA
+// ==========================================
 
-// ==========================================
-// FUNCIÓN DE SCROLL A FAQ EN EL OUTPUT
-// ==========================================
-function scrollToFAQInOutput() {
-  const outputPanel = document.querySelector('.panel.output');
-  const outputElement = document.getElementById('output');
-  
-  if (!outputPanel || !outputElement) {
-    console.warn('No se encontró el panel de salida');
-    return;
+class FAQManager {
+  constructor() {
+    this.scrollFeedbackTimeout = null;
   }
-  
-  // Buscar el texto de FAQ en el output
-  const outputContent = outputElement.innerHTML;
-  const faqPattern = /<span class="output-section">Preguntas Frecuentes:<\/span>/i;
-  const match = faqPattern.exec(outputContent);
-  
-  if (match) {
-    // Crear un elemento temporal para medir la posición
+
+  // ==========================================
+  // OPERACIONES PRINCIPALES
+  // ==========================================
+
+  addFAQ() {
+    state.faqs.push({ question: '', answer: '' });
+    this.renderFAQs();
+    this.scheduleAutoSave();
+  }
+
+  duplicateFAQ(index) {
+    const faqToDuplicate = state.faqs[index];
+    const duplicatedFAQ = this.duplicateFAQWithSuffix(faqToDuplicate);
+    
+    state.faqs.splice(index + 1, 0, duplicatedFAQ);
+    this.renderFAQs();
+    this.updatePrompt();
+    this.scheduleAutoSave();
+  }
+
+  removeFAQ(index) {
+    if (confirm('¿Eliminar esta pregunta frecuente?')) {
+      state.faqs.splice(index, 1);
+      this.renderFAQs();
+      this.updatePrompt();
+      this.scheduleAutoSave();
+    }
+  }
+
+  moveFAQ(index, direction) {
+    const faqs = state.faqs;
+    const newIndex = index + direction;
+    
+    if (newIndex >= 0 && newIndex < faqs.length) {
+      [faqs[index], faqs[newIndex]] = [faqs[newIndex], faqs[index]];
+      this.renderFAQs();
+      this.updatePrompt();
+      this.scheduleAutoSave();
+    }
+  }
+
+  updateFAQ(index, field, value) {
+    state.faqs[index][field] = value;
+    TimingUtils.debounce('faqUpdate', () => {
+      this.updatePrompt();
+      this.scheduleAutoSave();
+    }, 300);
+  }
+
+  // ==========================================
+  // FUNCIONES DE SCROLL
+  // ==========================================
+
+  scrollToFAQInOutput() {
+    const outputPanel = document.querySelector('.panel.output');
+    const outputElement = document.getElementById('output');
+    
+    if (!outputPanel || !outputElement) {
+      console.warn('No se encontró el panel de salida');
+      return;
+    }
+    
+    const outputContent = outputElement.innerHTML;
+    const faqPattern = /<span class="output-section">Preguntas Frecuentes:<\/span>/i;
+    const match = faqPattern.exec(outputContent);
+    
+    if (match) {
+      this.scrollToMatch(outputPanel, outputElement, match);
+      this.showFAQFeedback('Preguntas Frecuentes', true);
+    } else {
+      outputPanel.scrollTo({
+        top: outputPanel.scrollHeight,
+        behavior: 'smooth'
+      });
+      this.showFAQFeedback('Preguntas Frecuentes', false);
+    }
+  }
+
+  // ==========================================
+  // RENDERIZADO
+  // ==========================================
+
+  renderFAQs() {
+    const container = document.getElementById('faq-container');
+    container.innerHTML = state.faqs.map((faq, index) => 
+      this.renderFAQ(faq, index, state.faqs.length)
+    ).join('');
+
+    // Aplicar auto-resize si está disponible
+    if (window.autoResizeSystem) {
+      setTimeout(() => window.autoResizeSystem.resizeAll(), 10);
+    }
+  }
+
+  renderFAQ(faq, index, totalFAQs) {
+    const faqControls = this.renderFAQControls(index, totalFAQs);
+    
+    return `
+      <div class="list-item" style="flex-direction: column; align-items: stretch; background: var(--bg-tertiary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-secondary); position: relative; margin-bottom: 12px;">
+        ${faqControls}
+        <button class="delete-btn" onclick="faqManager.removeFAQ(${index})">×</button>
+        
+        <label>Pregunta:</label>
+        <input type="text" value="${TextUtils.escapeHtml(faq.question)}" placeholder="Pregunta frecuente..."
+               oninput="faqManager.updateFAQ(${index}, 'question', this.value)" style="margin-bottom: 8px;">
+        
+        <label>Respuesta:</label>
+        <textarea class="autoresize max-height" 
+                  placeholder="Respuesta..." 
+                  oninput="faqManager.updateFAQ(${index}, 'answer', this.value)">${TextUtils.escapeHtml(faq.answer)}</textarea>
+      </div>
+    `;
+  }
+
+  renderFAQControls(index, totalFAQs) {
+    return `
+      <div class="step-controls" style="position: absolute; top: 8px; right: 40px; display: flex; gap: 4px;">
+        <button class="step-btn" onclick="faqManager.duplicateFAQ(${index})" title="Duplicar FAQ">📄</button>
+        ${index > 0 ? `<button class="step-btn" onclick="faqManager.moveFAQ(${index}, -1)" title="Subir">↑</button>` : ''}
+        ${index < totalFAQs - 1 ? `<button class="step-btn" onclick="faqManager.moveFAQ(${index}, 1)" title="Bajar">↓</button>` : ''}
+        <button class="step-btn" onclick="faqManager.scrollToFAQInOutput()" title="Ir a las FAQ en el resultado" style="background: #f59e0b; color: white;">📍</button>
+      </div>
+    `;
+  }
+
+  // ==========================================
+  // MÉTODOS DE UTILIDAD PRIVADOS
+  // ==========================================
+
+  duplicateFAQWithSuffix(faq) {
+    const duplicated = JSON.parse(JSON.stringify(faq));
+    
+    if (duplicated.question && duplicated.question.trim()) {
+      duplicated.question = duplicated.question + " - Copia";
+    }
+    
+    if (duplicated.answer && duplicated.answer.trim()) {
+      duplicated.answer = duplicated.answer + " - Copia";
+    }
+    
+    return duplicated;
+  }
+
+  scrollToMatch(outputPanel, outputElement, match) {
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = outputContent.substring(0, match.index);
+    tempDiv.innerHTML = outputElement.innerHTML.substring(0, match.index);
     tempDiv.style.position = 'absolute';
     tempDiv.style.visibility = 'hidden';
     tempDiv.style.whiteSpace = 'pre-wrap';
@@ -43,168 +162,88 @@ function scrollToFAQInOutput() {
     tempDiv.style.width = outputElement.offsetWidth + 'px';
     
     document.body.appendChild(tempDiv);
-    
-    // Calcular la altura hasta las FAQs
     const targetHeight = tempDiv.offsetHeight;
-    
-    // Limpiar elemento temporal
     document.body.removeChild(tempDiv);
     
-    // Hacer scroll al panel - FAQs al inicio
     outputPanel.scrollTo({
       top: Math.max(0, targetHeight),
       behavior: 'smooth'
     });
-    
-    // Mostrar feedback visual
-    showFAQFeedback('Preguntas Frecuentes', true);
-  } else {
-    // Si no se encuentran FAQs, hacer scroll al final
-    outputPanel.scrollTo({
-      top: outputPanel.scrollHeight,
-      behavior: 'smooth'
-    });
-    
-    // Mostrar feedback visual
-    showFAQFeedback('Preguntas Frecuentes', false);
   }
-}
 
-// Función de feedback específica para FAQs
-function showFAQFeedback(elementName, found = true) {
-  const outputPanel = document.querySelector('.panel.output');
-  if (!outputPanel) return;
-  
-  // Calcular la posición del panel
-  const panelRect = outputPanel.getBoundingClientRect();
-  
-  // Posicionar la notificación DENTRO del panel derecho, en el borde izquierdo
-  const textPosition = panelRect.top + 30;
-  const leftPosition = panelRect.left + 20;
-  
-  // Crear elemento de feedback
-  const feedback = document.createElement('div');
-  feedback.style.cssText = `
-    position: fixed;
-    top: ${textPosition}px;
-    left: ${leftPosition}px;
-    background: ${found ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #f59e0b, #d97706)'};
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
-    opacity: 0;
-    transition: all 0.3s ease;
-    max-width: 240px;
-    text-align: left;
-    line-height: 1.2;
-    transform: translateY(-10px);
-  `;
-  
-  // Sin flecha, ya que está dentro del panel
-  feedback.innerHTML = `
-    ${found ? '❓ <strong>Aquí:</strong>' : '🔍 <strong>No visible:</strong>'}<br><span style="font-size: 10px;">${elementName}</span>
-  `;
-  
-  document.body.appendChild(feedback);
-  
-  // Animar entrada
-  setTimeout(() => {
-    feedback.style.opacity = '1';
-    feedback.style.transform = 'translateY(0)';
-  }, 10);
-  
-  // Remover después de 3 segundos
-  setTimeout(() => {
-    feedback.style.opacity = '0';
-    feedback.style.transform = 'translateY(-10px)';
+  showFAQFeedback(elementName, found = true) {
+    // Limpiar timeout anterior
+    if (this.scrollFeedbackTimeout) {
+      clearTimeout(this.scrollFeedbackTimeout);
+    }
+
+    const outputPanel = document.querySelector('.panel.output');
+    if (!outputPanel) return;
+    
+    const panelRect = outputPanel.getBoundingClientRect();
+    const textPosition = panelRect.top + 30;
+    const leftPosition = panelRect.left + 20;
+    
+    const feedback = document.createElement('div');
+    feedback.style.cssText = `
+      position: fixed; top: ${textPosition}px; left: ${leftPosition}px;
+      background: ${found ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #f59e0b, #d97706)'};
+      color: white; padding: 8px 12px; border-radius: 6px; font-size: 11px; font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); z-index: 1000; opacity: 0;
+      transition: all 0.3s ease; max-width: 240px; text-align: left; line-height: 1.2;
+      transform: translateY(-10px);
+    `;
+    
+    feedback.innerHTML = `
+      ${found ? '❓ <strong>Aquí:</strong>' : '🔍 <strong>No visible:</strong>'}<br>
+      <span style="font-size: 10px;">${elementName}</span>
+    `;
+    
+    document.body.appendChild(feedback);
+    
     setTimeout(() => {
-      if (feedback.parentNode) {
-        feedback.parentNode.removeChild(feedback);
-      }
-    }, 300);
-  }, 3000);
-}
+      feedback.style.opacity = '1';
+      feedback.style.transform = 'translateY(0)';
+    }, 10);
+    
+    this.scrollFeedbackTimeout = setTimeout(() => {
+      feedback.style.opacity = '0';
+      feedback.style.transform = 'translateY(-10px)';
+      setTimeout(() => {
+        if (feedback.parentNode) {
+          feedback.parentNode.removeChild(feedback);
+        }
+      }, 300);
+    }, 3000);
+  }
 
-// ==========================================
-// GESTIÓN DE FAQ
-// ==========================================
-function addFAQ() {
-  state.faqs.push({ question: '', answer: '' });
-  renderFAQs();
-  scheduleAutoSave();
-}
+  updatePrompt() {
+    if (window.updatePrompt) {
+      window.updatePrompt();
+    }
+  }
 
-function removeFAQ(index) {
-  if (confirm('¿Eliminar esta pregunta frecuente?')) {
-    state.faqs.splice(index, 1);
-    renderFAQs();
-    updatePrompt();
-    scheduleAutoSave();
+  scheduleAutoSave() {
+    if (window.scheduleAutoSave) {
+      window.scheduleAutoSave();
+    }
   }
 }
 
-// Agregar función de duplicado para FAQs individuales
-function duplicateFAQ(index) {
-  const faqToDuplicate = state.faqs[index];
-  // Crear una copia profunda del FAQ con sufijos "- Copia"
-  const duplicatedFAQ = duplicateFAQWithSuffix(faqToDuplicate);
-  
-  // Insertar el FAQ duplicado después del actual
-  state.faqs.splice(index + 1, 0, duplicatedFAQ);
-  
-  renderFAQs();
-  updatePrompt();
-  scheduleAutoSave();
-}
+// Instancia global
+const faqManager = new FAQManager();
 
-// Función auxiliar para duplicar FAQ con sufijos "- Copia"
-function duplicateFAQWithSuffix(faq) {
-  // Crear copia profunda del FAQ
-  const duplicatedFAQ = JSON.parse(JSON.stringify(faq));
-  
-  // Agregar "- Copia" a la pregunta si no está vacía
-  if (duplicatedFAQ.question && duplicatedFAQ.question.trim()) {
-    duplicatedFAQ.question = duplicatedFAQ.question + " - Copia";
-  }
-  
-  // Agregar "- Copia" a la respuesta si no está vacía
-  if (duplicatedFAQ.answer && duplicatedFAQ.answer.trim()) {
-    duplicatedFAQ.answer = duplicatedFAQ.answer + " - Copia";
-  }
-  
-  return duplicatedFAQ;
-}
+// Exportar globalmente
+window.faqManager = faqManager;
 
-function updateFAQ(index, field, value) {
-  state.faqs[index][field] = value;
-  // Usar debounce para evitar llamadas excesivas
-  clearTimeout(window.faqTimeout);
-  window.faqTimeout = setTimeout(() => {
-    updatePrompt();
-    scheduleAutoSave();
-  }, 300);
-}
+// Configurar renderizado en RenderUtils
+RenderUtils.renderFAQs = () => faqManager.renderFAQs();
 
-function renderFAQs() {
-  const container = document.getElementById('faq-container');
-  container.innerHTML = state.faqs.map((faq, index) => `
-    <div class="list-item" style="flex-direction: column; align-items: stretch; background: var(--bg-tertiary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-secondary); position: relative; margin-bottom: 12px;">
-      <div class="step-controls" style="position: absolute; top: 8px; right: 40px; display: flex; gap: 4px;">
-        <button class="step-btn" onclick="duplicateFAQ(${index})" title="Duplicar FAQ">📄</button>
-        ${index > 0 ? `<button class="step-btn" onclick="moveFAQ(${index}, -1)" title="Subir">↑</button>` : ''}
-        ${index < state.faqs.length - 1 ? `<button class="step-btn" onclick="moveFAQ(${index}, 1)" title="Bajar">↓</button>` : ''}
-        <button class="step-btn" onclick="scrollToFAQInOutput()" title="Ir a las FAQ en el resultado" style="background: #f59e0b; color: white;">📍</button>
-      </div>
-      <button class="delete-btn" onclick="removeFAQ(${index})">×</button>
-      <label>Pregunta:</label>
-      <input type="text" value="${escapeHtml(faq.question)}" placeholder="Pregunta frecuente..."
-             oninput="updateFAQ(${index}, 'question', this.value)" style="margin-bottom: 8px;">
-      <label>Respuesta:</label>
-      <textarea placeholder="Respuesta..." oninput="updateFAQ(${index}, 'answer', this.value)">${escapeHtml(faq.answer)}</textarea>
-    </div>
-  `).join('');
-}
+// Funciones legacy para compatibilidad
+window.addFAQ = () => faqManager.addFAQ();
+window.duplicateFAQ = (index) => faqManager.duplicateFAQ(index);
+window.removeFAQ = (index) => faqManager.removeFAQ(index);
+window.moveFAQ = (index, direction) => faqManager.moveFAQ(index, direction);
+window.updateFAQ = (index, field, value) => faqManager.updateFAQ(index, field, value);
+window.scrollToFAQInOutput = () => faqManager.scrollToFAQInOutput();
+window.renderFAQs = () => faqManager.renderFAQs();

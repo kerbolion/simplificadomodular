@@ -1,433 +1,118 @@
-function renderSectionControls() {
-  const container = document.getElementById('section-controls');
-  if (!container) return;
-  
-  let controlsHTML = `
-    <button type="button" class="btn-small" onclick="addSection()">➕ Nueva Sección</button>
-    <button type="button" class="btn-small" onclick="duplicateSection()">📄 Duplicar</button>
-    <button type="button" class="btn-small btn-danger" onclick="deleteSection()">🗑️ Eliminar</button>
-  `;
-  
-  // Agregar botones de reorganización si hay más de una sección
-  if (state.sections.length > 1) {
-    if (state.currentSection > 0) {
-      controlsHTML += `<button type="button" class="btn-small" onclick="moveSection(-1)">⬆️ Subir</button>`;
-    }
-    if (state.currentSection < state.sections.length - 1) {
-      controlsHTML += `<button type="button" class="btn-small" onclick="moveSection(1)">⬇️ Bajar</button>`;
-    }
-  }
-  
-  container.innerHTML = controlsHTML;
-}
-
-function moveSection(direction) {
-  const sections = state.sections;
-  const currentIndex = state.currentSection;
-  const newIndex = currentIndex + direction;
-  
-  if (newIndex >= 0 && newIndex < sections.length) {
-    // Intercambiar secciones
-    [sections[currentIndex], sections[newIndex]] = [sections[newIndex], sections[currentIndex]];
-    
-    // Actualizar índice actual
-    state.currentSection = newIndex;
-    
-    // Re-renderizar
-    renderSections();
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-}
-
 // ==========================================
-// FUNCIÓN DE SCROLL PRECISO A CAMPO ESPECÍFICO
+// GESTIÓN DE SECCIONES OPTIMIZADA
 // ==========================================
-function scrollToFieldInOutput(fieldIndex) {
-  const currentSection = state.sections[state.currentSection];
-  const field = currentSection.fields[fieldIndex];
-  
-  if (!field) {
-    console.warn('Campo no encontrado');
-    return;
+
+class SectionManager {
+  constructor() {
+    this.scrollFeedbackTimeout = null;
   }
-  
-  const outputPanel = document.querySelector('.panel.output');
-  const outputElement = document.getElementById('output');
-  
-  if (!outputPanel || !outputElement) {
-    console.warn('No se encontró el panel de salida');
-    return;
-  }
-  
-  // Buscar el contenido específico del campo en el output
-  let searchPatterns = [];
-  let fieldDescription = '';
-  
-  if (field.type === 'h1' || field.type === 'h2' || field.type === 'h3') {
-    // Para encabezados, buscar el texto exacto
-    if (field.value && field.value.trim()) {
-      const escapedValue = escapeRegex(field.value.trim());
-      searchPatterns.push(new RegExp(`<span class="output-${field.type}">${escapedValue}</span>`, 'i'));
-      fieldDescription = `${field.type.toUpperCase()}: "${field.value.trim()}"`;
-    }
-  } else if (field.type === 'text' && field.items) {
-    // Para campos de texto, buscar el primer item no vacío
-    const firstItem = field.items.find(item => item.trim());
-    if (firstItem) {
-      const escapedItem = escapeRegex(firstItem.trim());
-      searchPatterns.push(new RegExp(`- ${escapedItem}`, 'i'));
-      fieldDescription = `${field.label}: "${firstItem.trim()}"`;
-    }
-  } else if (field.type === 'textarea' && field.value) {
-    // Para textarea, buscar el texto completo
-    const escapedValue = escapeRegex(field.value.trim());
-    searchPatterns.push(new RegExp(escapedValue, 'i'));
-    fieldDescription = `${field.label}: "${field.value.trim().substring(0, 30)}${field.value.trim().length > 30 ? '...' : ''}"`;
-  } else if (field.type === 'list' && field.items) {
-    // Para listas, buscar el primer item no vacío
-    const firstItem = field.items.find(item => item.trim());
-    if (firstItem) {
-      const escapedItem = escapeRegex(firstItem.trim());
-      searchPatterns.push(new RegExp(`<span class="output-step-number">1\\.</span> ${escapedItem}`, 'i'));
-      fieldDescription = `${field.label}: "${firstItem.trim()}"`;
+
+  // ==========================================
+  // OPERACIONES PRINCIPALES
+  // ==========================================
+
+  addSection() {
+    const name = prompt("Nombre de la nueva sección:", `Sección ${state.sections.length + 1}`);
+    if (name && name.trim()) {
+      state.sections.push({ 
+        name: name.trim(), 
+        fields: [] 
+      });
+      state.currentSection = state.sections.length - 1;
+      this.renderSections();
+      this.renderSectionContent();
+      this.updatePrompt();
+      this.scheduleAutoSave();
     }
   }
-  
-  // Si no hay patrones, intentar buscar por el label de la sección
-  if (searchPatterns.length === 0) {
-    const sectionName = currentSection.name;
-    const escapedSection = escapeRegex(sectionName);
-    searchPatterns.push(new RegExp(`<span class="output-section">${escapedSection}:</span>`, 'i'));
-    fieldDescription = `Sección: "${sectionName}"`;
-  }
-  
-  const outputContent = outputElement.innerHTML;
-  let match = null;
-  
-  // Intentar cada patrón hasta encontrar una coincidencia
-  for (const pattern of searchPatterns) {
-    match = pattern.exec(outputContent);
-    if (match) break;
-  }
-  
-  if (match) {
-    // Crear un elemento temporal para medir la posición
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = outputContent.substring(0, match.index);
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.visibility = 'hidden';
-    tempDiv.style.whiteSpace = 'pre-wrap';
-    tempDiv.style.fontFamily = outputElement.style.fontFamily || "'Consolas', 'Monaco', 'Courier New', monospace";
-    tempDiv.style.fontSize = outputElement.style.fontSize || '14px';
-    tempDiv.style.lineHeight = outputElement.style.lineHeight || '1.6';
-    tempDiv.style.width = outputElement.offsetWidth + 'px';
-    
-    document.body.appendChild(tempDiv);
-    
-    // Calcular la altura hasta el campo específico
-    const targetHeight = tempDiv.offsetHeight;
-    
-    // Limpiar elemento temporal
-    document.body.removeChild(tempDiv);
-    
-    // Hacer scroll al panel - elemento al inicio (sin margen)
-    outputPanel.scrollTo({
-      top: Math.max(0, targetHeight), // Sin margen - elemento al inicio del panel
-      behavior: 'smooth'
-    });
-    
-    // Mostrar feedback visual específico
-    showFieldScrollFeedback(fieldDescription, true);
-  } else {
-    // Si no se encuentra el campo, hacer scroll al inicio de la sección
-    scrollToSectionInOutput();
-    showFieldScrollFeedback(fieldDescription, false);
-  }
-}
 
-// ==========================================
-// FUNCIÓN DE SCROLL A SECCIÓN COMPLETA (FALLBACK)
-// ==========================================
-function scrollToSectionInOutput() {
-  const currentSectionName = state.sections[state.currentSection].name;
-  const outputPanel = document.querySelector('.panel.output');
-  const outputElement = document.getElementById('output');
-  
-  if (!outputPanel || !outputElement) {
-    console.warn('No se encontró el panel de salida');
-    return;
-  }
-  
-  // Buscar el texto de la sección en el output
-  const outputContent = outputElement.innerHTML;
-  const sectionPattern = new RegExp(`<span class="output-section">${escapeRegex(currentSectionName)}:</span>`, 'i');
-  const match = sectionPattern.exec(outputContent);
-  
-  if (match) {
-    // Crear un elemento temporal para medir la posición
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = outputContent.substring(0, match.index);
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.visibility = 'hidden';
-    tempDiv.style.whiteSpace = 'pre-wrap';
-    tempDiv.style.fontFamily = outputElement.style.fontFamily || "'Consolas', 'Monaco', 'Courier New', monospace";
-    tempDiv.style.fontSize = outputElement.style.fontSize || '14px';
-    tempDiv.style.lineHeight = outputElement.style.lineHeight || '1.6';
-    tempDiv.style.width = outputElement.offsetWidth + 'px';
+  duplicateSection() {
+    const currentSection = state.sections[state.currentSection];
+    const newName = prompt("Nombre para la sección duplicada:", `${currentSection.name} - Copia`);
     
-    document.body.appendChild(tempDiv);
-    
-    // Calcular la altura hasta la sección
-    const targetHeight = tempDiv.offsetHeight;
-    
-    // Limpiar elemento temporal
-    document.body.removeChild(tempDiv);
-    
-    // Hacer scroll al panel - sección al inicio
-    outputPanel.scrollTo({
-      top: Math.max(0, targetHeight), // Sin margen - sección al inicio del panel
-      behavior: 'smooth'
-    });
-    
-    // Mostrar feedback visual
-    showFieldScrollFeedback(`Sección: "${currentSectionName}"`, true);
-  } else {
-    // Si no se encuentra la sección, hacer scroll al inicio
-    outputPanel.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-    
-    showFieldScrollFeedback(`Sección: "${currentSectionName}"`, false);
-  }
-}
-
-// Función auxiliar para escapar caracteres especiales en regex
-function escapeRegex(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// Mostrar feedback visual específico para campos
-function showFieldScrollFeedback(fieldDescription, found = true) {
-  const outputPanel = document.querySelector('.panel.output');
-  const outputElement = document.getElementById('output');
-  if (!outputPanel || !outputElement) return;
-  
-  // Calcular la posición del panel
-  const panelRect = outputPanel.getBoundingClientRect();
-  
-  // Posicionar la notificación DENTRO del panel derecho, en el borde izquierdo
-  const textPosition = panelRect.top + 30; // 30px desde el top del panel visible
-  const leftPosition = panelRect.left + 20; // 20px DENTRO del panel derecho
-  
-  // Crear elemento de feedback
-  const feedback = document.createElement('div');
-  feedback.style.cssText = `
-    position: fixed;
-    top: ${textPosition}px;
-    left: ${leftPosition}px;
-    background: ${found ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #f59e0b, #d97706)'};
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
-    opacity: 0;
-    transition: all 0.3s ease;
-    max-width: 240px;
-    text-align: left;
-    line-height: 1.2;
-    transform: translateY(-10px);
-  `;
-  
-  // Sin flecha, ya que está dentro del panel
-  feedback.innerHTML = `
-    ${found ? '📍 <strong>Aquí:</strong>' : '🔍 <strong>No visible:</strong>'}<br><span style="font-size: 10px;">${fieldDescription}</span>
-  `;
-  
-  document.body.appendChild(feedback);
-  
-  // Animar entrada
-  setTimeout(() => {
-    feedback.style.opacity = '1';
-    feedback.style.transform = 'translateY(0)';
-  }, 10);
-  
-  // Remover después de 3 segundos
-  setTimeout(() => {
-    feedback.style.opacity = '0';
-    feedback.style.transform = 'translateY(-10px)';
-    setTimeout(() => {
-      if (feedback.parentNode) {
-        feedback.parentNode.removeChild(feedback);
-      }
-    }, 300);
-  }, 3000);
-}
-
-// ==========================================
-// GESTIÓN DE PESTAÑAS
-// ==========================================
-function showTab(index) {
-  document.querySelectorAll('.tab').forEach((tab, i) => {
-    tab.classList.toggle('active', i === index);
-  });
-  document.querySelectorAll('.tab-content').forEach((content, i) => {
-    content.classList.toggle('active', i === index);
-  });
-  state.currentTab = index;
-}
-
-// ==========================================
-// GESTIÓN DE SECCIONES
-// ==========================================
-function addSection() {
-  const name = prompt("Nombre de la nueva sección:", `Sección ${state.sections.length + 1}`);
-  if (name && name.trim()) {
-    state.sections.push({ 
-      name: name.trim(), 
-      fields: [] 
-    });
-    state.currentSection = state.sections.length - 1;
-    renderSections();
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-}
-
-function duplicateSection() {
-  const currentSection = state.sections[state.currentSection];
-  const newName = prompt("Nombre para la sección duplicada:", `${currentSection.name} - Copia`);
-  
-  if (newName && newName.trim()) {
-    // Crear una copia profunda de la sección actual con sufijos "- Copia"
-    const duplicatedSection = duplicateSectionWithSuffix(currentSection, newName.trim());
-    
-    // Insertar la sección duplicada después de la actual
-    state.sections.splice(state.currentSection + 1, 0, duplicatedSection);
-    state.currentSection = state.currentSection + 1;
-    
-    renderSections();
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-}
-
-// Función auxiliar para duplicar sección con sufijos "- Copia" recursivamente
-function duplicateSectionWithSuffix(section, newName) {
-  // Crear copia profunda de la sección
-  const duplicatedSection = JSON.parse(JSON.stringify(section));
-  duplicatedSection.name = newName;
-  
-  // Procesar todos los campos de la sección
-  duplicatedSection.fields.forEach(field => {
-    // Agregar "- Copia" al label del campo
-    if (field.label && field.label.trim()) {
-      field.label = field.label + " - Copia";
+    if (newName && newName.trim()) {
+      const duplicatedSection = this.duplicateWithSuffix(currentSection, newName.trim());
+      state.sections.splice(state.currentSection + 1, 0, duplicatedSection);
+      state.currentSection = state.currentSection + 1;
+      
+      this.renderSections();
+      this.renderSectionContent();
+      this.updatePrompt();
+      this.scheduleAutoSave();
     }
-    
-    // Procesar según el tipo de campo
-    switch (field.type) {
-      case 'h1':
-      case 'h2':
-      case 'h3':
-        // Encabezados: agregar "- Copia" al valor
-        if (field.value && field.value.trim()) {
-          field.value = field.value + " - Copia";
-        }
-        break;
-        
-      case 'textarea':
-        // Textarea: agregar "- Copia" al valor
-        if (field.value && field.value.trim()) {
-          field.value = field.value + " - Copia";
-        }
-        break;
-        
-      case 'text':
-      case 'list':
-        // Campos de texto y listas: agregar "- Copia" a cada item
-        if (field.items && field.items.length > 0) {
-          field.items = field.items.map(item => {
-            if (typeof item === 'string' && item.trim()) {
-              return item + " - Copia";
-            }
-            return item;
-          });
-        }
-        break;
-    }
-  });
-  
-  return duplicatedSection;
-}
-
-function deleteSection() {
-  if (state.sections.length <= 1) {
-    alert("Debe haber al menos una sección");
-    return;
   }
-  
-  if (confirm(`¿Eliminar la sección "${state.sections[state.currentSection].name}"?`)) {
-    state.sections.splice(state.currentSection, 1);
-    state.currentSection = Math.max(0, state.currentSection - 1);
-    renderSections();
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-}
 
-function changeSection() {
-  state.currentSection = parseInt(document.getElementById('section-selector').value);
-  renderSectionContent();
-  renderSectionControls(); // Actualizar botones de reorganización
-  document.getElementById('section-name').value = state.sections[state.currentSection].name;
-}
-
-function renameSection() {
-  const newName = document.getElementById('section-name').value.trim();
-  if (newName) {
-    state.sections[state.currentSection].name = newName;
-    renderSections();
-    updatePrompt();
-    scheduleAutoSave();
-  }
-}
-
-function renderSections() {
-  const selector = document.getElementById('section-selector');
-  selector.innerHTML = state.sections.map((section, index) => 
-    `<option value="${index}" ${index === state.currentSection ? 'selected' : ''}>${escapeHtml(section.name)}</option>`
-  ).join('');
-  
-  if (document.getElementById('section-name')) {
-    document.getElementById('section-name').value = state.sections[state.currentSection].name;
-  }
-  
-  // Renderizar controles de reorganización
-  renderSectionControls();
-}
-
-// ==========================================
-// GESTIÓN DE CONTENIDO DE SECCIONES
-// ==========================================
-
-// Función unificada para agregar campos
-function addField(fieldType) {
-  if (fieldType === 'header') {
-    // Mostrar opciones de encabezado
-    const headerType = prompt('Selecciona el tipo de encabezado:\n1 - H1 (Título principal)\n2 - H2 (Subtítulo)\n3 - H3 (Encabezado menor)\n\nEscribe 1, 2 o 3:');
-    
-    if (!headerType || !['1', '2', '3'].includes(headerType)) {
+  deleteSection() {
+    if (state.sections.length <= 1) {
+      alert("Debe haber al menos una sección");
       return;
     }
+    
+    if (confirm(`¿Eliminar la sección "${state.sections[state.currentSection].name}"?`)) {
+      state.sections.splice(state.currentSection, 1);
+      state.currentSection = Math.max(0, state.currentSection - 1);
+      this.renderSections();
+      this.renderSectionContent();
+      this.updatePrompt();
+      this.scheduleAutoSave();
+    }
+  }
+
+  changeSection() {
+    state.currentSection = parseInt(document.getElementById('section-selector').value);
+    this.renderSectionContent();
+    this.renderSectionControls();
+    document.getElementById('section-name').value = state.sections[state.currentSection].name;
+  }
+
+  renameSection() {
+    const newName = document.getElementById('section-name').value.trim();
+    if (newName) {
+      state.sections[state.currentSection].name = newName;
+      this.renderSections();
+      this.updatePrompt();
+      this.scheduleAutoSave();
+    }
+  }
+
+  moveSection(direction) {
+    const sections = state.sections;
+    const currentIndex = state.currentSection;
+    const newIndex = currentIndex + direction;
+    
+    if (newIndex >= 0 && newIndex < sections.length) {
+      [sections[currentIndex], sections[newIndex]] = [sections[newIndex], sections[currentIndex]];
+      state.currentSection = newIndex;
+      
+      this.renderSections();
+      this.renderSectionContent();
+      this.updatePrompt();
+      this.scheduleAutoSave();
+    }
+  }
+
+  // ==========================================
+  // GESTIÓN DE CAMPOS
+  // ==========================================
+
+  addField(fieldType) {
+    const fieldHandlers = {
+      'header': () => this.addHeaderField(),
+      'text': () => this.addTextFieldWithPrompt(),
+      'textarea': () => this.addTextAreaFieldWithPrompt(),
+      'list': () => this.addListFieldWithPrompt()
+    };
+
+    const handler = fieldHandlers[fieldType];
+    if (handler) {
+      handler();
+    }
+  }
+
+  addHeaderField() {
+    const headerType = prompt('Selecciona el tipo de encabezado:\n1 - H1 (Título principal)\n2 - H2 (Subtítulo)\n3 - H3 (Encabezado menor)\n\nEscribe 1, 2 o 3:');
+    
+    if (!headerType || !['1', '2', '3'].includes(headerType)) return;
     
     const typeMap = { '1': 'h1', '2': 'h2', '3': 'h3' };
     const selectedType = typeMap[headerType];
@@ -438,11 +123,11 @@ function addField(fieldType) {
         type: selectedType,
         value: value.trim()
       });
-      renderSectionContent();
-      updatePrompt();
-      scheduleAutoSave();
+      this.updateUI();
     }
-  } else if (fieldType === 'text') {
+  }
+
+  addTextFieldWithPrompt() {
     const label = prompt("Etiqueta del campo:");
     if (label && label.trim()) {
       state.sections[state.currentSection].fields.push({
@@ -450,11 +135,11 @@ function addField(fieldType) {
         label: label.trim(),
         items: [""]
       });
-      renderSectionContent();
-      updatePrompt();
-      scheduleAutoSave();
+      this.updateUI();
     }
-  } else if (fieldType === 'textarea') {
+  }
+
+  addTextAreaFieldWithPrompt() {
     const label = prompt("Etiqueta del área de texto:");
     if (label && label.trim()) {
       state.sections[state.currentSection].fields.push({
@@ -462,11 +147,11 @@ function addField(fieldType) {
         label: label.trim(),
         value: ""
       });
-      renderSectionContent();
-      updatePrompt();
-      scheduleAutoSave();
+      this.updateUI();
     }
-  } else if (fieldType === 'list') {
+  }
+
+  addListFieldWithPrompt() {
     const label = prompt("Título de la lista:");
     if (label && label.trim()) {
       state.sections[state.currentSection].fields.push({
@@ -474,349 +159,619 @@ function addField(fieldType) {
         label: label.trim(),
         items: [""]
       });
-      renderSectionContent();
-      updatePrompt();
-      scheduleAutoSave();
+      this.updateUI();
     }
   }
-}
 
-// Función para editar el label/título de un campo
-function editFieldLabel(fieldIndex) {
-  const field = state.sections[state.currentSection].fields[fieldIndex];
-  const currentLabel = field.label || '';
-  const newLabel = prompt('Nuevo nombre para el campo:', currentLabel);
-  
-  if (newLabel !== null && newLabel.trim()) {
-    field.label = newLabel.trim();
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
+  editFieldLabel(fieldIndex) {
+    const field = state.sections[state.currentSection].fields[fieldIndex];
+    const currentLabel = field.label || '';
+    const newLabel = prompt('Nuevo nombre para el campo:', currentLabel);
+    
+    if (newLabel !== null && newLabel.trim()) {
+      field.label = newLabel.trim();
+      this.updateUI();
+    }
   }
-}
 
-// Función para duplicar un campo
-function duplicateField(fieldIndex) {
-  const fieldToDuplicate = state.sections[state.currentSection].fields[fieldIndex];
-  // Crear una copia profunda del campo con sufijos "- Copia"
-  const duplicatedField = duplicateFieldWithSuffix(fieldToDuplicate);
-  
-  // Insertar el campo duplicado después del actual
-  state.sections[state.currentSection].fields.splice(fieldIndex + 1, 0, duplicatedField);
-  
-  renderSectionContent();
-  updatePrompt();
-  scheduleAutoSave();
-}
-
-// Función auxiliar para duplicar campo con sufijos "- Copia" recursivamente
-function duplicateFieldWithSuffix(field) {
-  // Crear copia profunda del campo
-  const duplicatedField = JSON.parse(JSON.stringify(field));
-  
-  // Agregar "- Copia" al label si existe
-  if (duplicatedField.label && duplicatedField.label.trim()) {
-    duplicatedField.label = duplicatedField.label + " - Copia";
+  duplicateField(fieldIndex) {
+    const fieldToDuplicate = state.sections[state.currentSection].fields[fieldIndex];
+    const duplicatedField = this.duplicateFieldWithSuffix(fieldToDuplicate);
+    
+    state.sections[state.currentSection].fields.splice(fieldIndex + 1, 0, duplicatedField);
+    this.updateUI();
   }
-  
-  // Procesar según el tipo de campo
-  switch (duplicatedField.type) {
-    case 'h1':
-    case 'h2':
-    case 'h3':
-      // Encabezados: agregar "- Copia" al valor
-      if (duplicatedField.value && duplicatedField.value.trim()) {
-        duplicatedField.value = duplicatedField.value + " - Copia";
-      }
-      break;
-      
-    case 'textarea':
-      // Textarea: agregar "- Copia" al valor
-      if (duplicatedField.value && duplicatedField.value.trim()) {
-        duplicatedField.value = duplicatedField.value + " - Copia";
-      }
-      break;
-      
-    case 'text':
-    case 'list':
-      // Campos de texto y listas: agregar "- Copia" a cada item
-      if (duplicatedField.items && duplicatedField.items.length > 0) {
-        duplicatedField.items = duplicatedField.items.map(item => {
-          if (typeof item === 'string' && item.trim()) {
-            return item + " - Copia";
-          }
-          return item;
-        });
-      }
-      break;
+
+  removeField(fieldIndex) {
+    if (confirm("¿Eliminar este campo?")) {
+      state.sections[state.currentSection].fields.splice(fieldIndex, 1);
+      this.updateUI();
+    }
   }
-  
-  return duplicatedField;
-}
 
-// Función para agregar encabezados H1, H2, H3 (mantenida por compatibilidad)
-function addHeaderField(headerType) {
-  const headerTypes = {
-    'h1': 'Encabezado H1',
-    'h2': 'Encabezado H2', 
-    'h3': 'Encabezado H3'
-  };
-  
-  const value = prompt(`Texto del ${headerTypes[headerType]}:`);
-  if (value && value.trim()) {
-    state.sections[state.currentSection].fields.push({
-      type: headerType,
-      value: value.trim()
-    });
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
+  moveField(fieldIndex, direction) {
+    const fields = state.sections[state.currentSection].fields;
+    const newIndex = fieldIndex + direction;
+    
+    if (newIndex >= 0 && newIndex < fields.length) {
+      [fields[fieldIndex], fields[newIndex]] = [fields[newIndex], fields[fieldIndex]];
+      this.updateUI();
+    }
   }
-}
 
-function addTextField() {
-  addField('text');
-}
+  // ==========================================
+  // GESTIÓN DE ITEMS EN CAMPOS
+  // ==========================================
 
-function addTextAreaField() {
-  addField('textarea');
-}
-
-function addListField() {
-  addField('list');
-}
-
-function removeField(fieldIndex) {
-  if (confirm("¿Eliminar este campo?")) {
-    state.sections[state.currentSection].fields.splice(fieldIndex, 1);
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
+  addTextItem(fieldIndex) {
+    state.sections[state.currentSection].fields[fieldIndex].items.push('');
+    this.renderSectionContent();
+    this.scheduleAutoSave();
   }
-}
 
-function moveField(fieldIndex, direction) {
-  const fields = state.sections[state.currentSection].fields;
-  const newIndex = fieldIndex + direction;
-  
-  if (newIndex >= 0 && newIndex < fields.length) {
-    [fields[fieldIndex], fields[newIndex]] = [fields[newIndex], fields[fieldIndex]];
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
+  removeTextItem(fieldIndex, itemIndex) {
+    if (confirm('¿Eliminar este elemento?')) {
+      state.sections[state.currentSection].fields[fieldIndex].items.splice(itemIndex, 1);
+      this.updateUI();
+    }
   }
-}
 
-// Función para actualizar el valor de los encabezados
-function updateHeaderValue(fieldIndex, value) {
-  state.sections[state.currentSection].fields[fieldIndex].value = value;
-  // Usar debounce para evitar llamadas excesivas
-  clearTimeout(window.headerValueTimeout);
-  window.headerValueTimeout = setTimeout(() => {
-    updatePrompt();
-    scheduleAutoSave();
-  }, 300);
-}
-
-function updateTextField(fieldIndex, value) {
-  state.sections[state.currentSection].fields[fieldIndex].value = value;
-  // Usar debounce para evitar llamadas excesivas
-  clearTimeout(window.textFieldTimeout);
-  window.textFieldTimeout = setTimeout(() => {
-    updatePrompt();
-    scheduleAutoSave();
-  }, 300);
-}
-
-// Nuevas funciones para campos de texto como listas
-function addTextItem(fieldIndex) {
-  state.sections[state.currentSection].fields[fieldIndex].items.push('');
-  renderSectionContent();
-  scheduleAutoSave();
-}
-
-function removeTextItem(fieldIndex, itemIndex) {
-  if (confirm('¿Eliminar este elemento?')) {
-    state.sections[state.currentSection].fields[fieldIndex].items.splice(itemIndex, 1);
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
+  moveTextItem(fieldIndex, itemIndex, direction) {
+    const items = state.sections[state.currentSection].fields[fieldIndex].items;
+    const newIndex = itemIndex + direction;
+    
+    if (newIndex >= 0 && newIndex < items.length) {
+      [items[itemIndex], items[newIndex]] = [items[newIndex], items[itemIndex]];
+      this.updateUI();
+    }
   }
-}
 
-function moveTextItem(fieldIndex, itemIndex, direction) {
-  const items = state.sections[state.currentSection].fields[fieldIndex].items;
-  const newIndex = itemIndex + direction;
-  
-  if (newIndex >= 0 && newIndex < items.length) {
-    [items[itemIndex], items[newIndex]] = [items[newIndex], items[itemIndex]];
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
+  updateTextItem(fieldIndex, itemIndex, value) {
+    state.sections[state.currentSection].fields[fieldIndex].items[itemIndex] = value;
+    this.debouncedUpdate();
   }
-}
 
-function updateTextItem(fieldIndex, itemIndex, value) {
-  state.sections[state.currentSection].fields[fieldIndex].items[itemIndex] = value;
-  // Usar debounce para evitar llamadas excesivas
-  clearTimeout(window.textItemTimeout);
-  window.textItemTimeout = setTimeout(() => {
-    updatePrompt();
-    scheduleAutoSave();
-  }, 300);
-}
-
-function addListItem(fieldIndex) {
-  state.sections[state.currentSection].fields[fieldIndex].items.push('');
-  renderSectionContent();
-  scheduleAutoSave();
-}
-
-function removeListItem(fieldIndex, itemIndex) {
-  if (confirm('¿Eliminar este elemento?')) {
-    state.sections[state.currentSection].fields[fieldIndex].items.splice(itemIndex, 1);
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
+  addListItem(fieldIndex) {
+    state.sections[state.currentSection].fields[fieldIndex].items.push('');
+    this.renderSectionContent();
+    this.scheduleAutoSave();
   }
-}
 
-function moveListItem(fieldIndex, itemIndex, direction) {
-  const items = state.sections[state.currentSection].fields[fieldIndex].items;
-  const newIndex = itemIndex + direction;
-  
-  if (newIndex >= 0 && newIndex < items.length) {
-    [items[itemIndex], items[newIndex]] = [items[newIndex], items[itemIndex]];
-    renderSectionContent();
-    updatePrompt();
-    scheduleAutoSave();
+  removeListItem(fieldIndex, itemIndex) {
+    if (confirm('¿Eliminar este elemento?')) {
+      state.sections[state.currentSection].fields[fieldIndex].items.splice(itemIndex, 1);
+      this.updateUI();
+    }
   }
-}
 
-function updateListItem(fieldIndex, itemIndex, value) {
-  state.sections[state.currentSection].fields[fieldIndex].items[itemIndex] = value;
-  // Usar debounce para evitar llamadas excesivas
-  clearTimeout(window.listItemTimeout);
-  window.listItemTimeout = setTimeout(() => {
-    updatePrompt();
-    scheduleAutoSave();
-  }, 300);
-}
+  moveListItem(fieldIndex, itemIndex, direction) {
+    const items = state.sections[state.currentSection].fields[fieldIndex].items;
+    const newIndex = itemIndex + direction;
+    
+    if (newIndex >= 0 && newIndex < items.length) {
+      [items[itemIndex], items[newIndex]] = [items[newIndex], items[itemIndex]];
+      this.updateUI();
+    }
+  }
 
-function renderSectionContent() {
-  const container = document.getElementById('section-content-container');
-  const currentSection = state.sections[state.currentSection];
-  
-  container.innerHTML = currentSection.fields.map((field, fieldIndex) => {
-    // Controles de reorganización para campos
-    const fieldControls = `
-      <div class="step-controls">
-        ${fieldIndex > 0 ? `<button class="step-btn" onclick="moveField(${fieldIndex}, -1)" title="Subir">↑</button>` : ''}
-        ${fieldIndex < currentSection.fields.length - 1 ? `<button class="step-btn" onclick="moveField(${fieldIndex}, 1)" title="Bajar">↓</button>` : ''}
-        <button class="step-btn" onclick="scrollToFieldInOutput(${fieldIndex})" title="Ir a este campo específico en el resultado" style="background: #6366f1; color: white;">📍</button>
-        <button class="step-btn btn-danger" onclick="removeField(${fieldIndex})" title="Eliminar">×</button>
-      </div>
-    `;
+  updateListItem(fieldIndex, itemIndex, value) {
+    state.sections[state.currentSection].fields[fieldIndex].items[itemIndex] = value;
+    this.debouncedUpdate();
+  }
 
-    // Renderizar encabezados H1, H2, H3
-    if (field.type === 'h1' || field.type === 'h2' || field.type === 'h3') {
-      const typeConfig = {
-        'h1': { icon: '📰', name: 'H1', color: '#2563eb' },
-        'h2': { icon: '📝', name: 'H2', color: '#7c3aed' },
-        'h3': { icon: '📄', name: 'H3', color: '#059669' }
-      };
-      
-      const config = typeConfig[field.type];
-      
-      return `
-        <div class="step">
-          <div class="step-header">
-            <span class="step-number type-${field.type}">${config.icon} ${config.name}</span>
-            <button class="step-btn" onclick="duplicateField(${fieldIndex})" title="Duplicar" style="margin-right: 8px;">📄</button>
-            ${fieldControls}
-          </div>
-          
-          <div class="form-group">
-            <input type="text" value="${escapeHtml(field.value || '')}" 
-                   placeholder="Texto del encabezado..." 
-                   oninput="updateHeaderValue(${fieldIndex}, this.value)">
-          </div>
-        </div>
-      `;
+  updateHeaderValue(fieldIndex, value) {
+    state.sections[state.currentSection].fields[fieldIndex].value = value;
+    this.debouncedUpdate();
+  }
+
+  updateTextField(fieldIndex, value) {
+    state.sections[state.currentSection].fields[fieldIndex].value = value;
+    this.debouncedUpdate();
+  }
+
+  // ==========================================
+  // FUNCIONES DE SCROLL
+  // ==========================================
+
+  scrollToFieldInOutput(fieldIndex) {
+    const currentSection = state.sections[state.currentSection];
+    const field = currentSection.fields[fieldIndex];
+    
+    if (!field) {
+      console.warn('Campo no encontrado');
+      return;
     }
     
-    if (field.type === 'text') {
-      // Asegurar que items existe
-      if (!field.items) field.items = [field.value || ''];
-      
-      return `
-        <div class="step">
-          <div class="step-header">
-            <span class="step-number type-text">📝 ${escapeHtml(field.label)}</span>
-            <button class="step-btn" onclick="editFieldLabel(${fieldIndex})" title="Editar nombre" style="margin-right: 8px;">✏️</button>
-            <button class="step-btn" onclick="duplicateField(${fieldIndex})" title="Duplicar" style="margin-right: 8px;">📄</button>
-            ${fieldControls}
-          </div>
-          
-          <div class="dynamic-list">
-            ${field.items.map((item, itemIndex) => `
-              <div class="list-item">
-                <input type="text" value="${escapeHtml(item)}" placeholder="Nuevo elemento..." 
-                       oninput="updateTextItem(${fieldIndex}, ${itemIndex}, this.value)">
-                <div class="list-item-controls">
-                  ${itemIndex > 0 ? `<button class="btn-small" onclick="moveTextItem(${fieldIndex}, ${itemIndex}, -1)" title="Subir">↑</button>` : ''}
-                  ${itemIndex < field.items.length - 1 ? `<button class="btn-small" onclick="moveTextItem(${fieldIndex}, ${itemIndex}, 1)" title="Bajar">↓</button>` : ''}
-                  <button class="btn-small btn-danger" onclick="removeTextItem(${fieldIndex}, ${itemIndex})">×</button>
-                </div>
-              </div>
-            `).join('')}
-            <button type="button" class="btn-small" onclick="addTextItem(${fieldIndex})">➕ Agregar Elemento</button>
-          </div>
-        </div>
-      `;
-    } else if (field.type === 'textarea') {
-      return `
-        <div class="step">
-          <div class="step-header">
-            <span class="step-number type-textarea">📄 ${escapeHtml(field.label)}</span>
-            <button class="step-btn" onclick="editFieldLabel(${fieldIndex})" title="Editar nombre" style="margin-right: 8px;">✏️</button>
-            <button class="step-btn" onclick="duplicateField(${fieldIndex})" title="Duplicar" style="margin-right: 8px;">📄</button>
-            ${fieldControls}
-          </div>
-          
-          <div class="form-group">
-            <textarea placeholder="Ingresa el texto..." 
-                      oninput="updateTextField(${fieldIndex}, this.value)">${escapeHtml(field.value)}</textarea>
-          </div>
-        </div>
-      `;
-    } else if (field.type === 'list') {
-      return `
-        <div class="step">
-          <div class="step-header">
-            <span class="step-number type-list">📋 ${escapeHtml(field.label)}</span>
-            <button class="step-btn" onclick="editFieldLabel(${fieldIndex})" title="Editar nombre" style="margin-right: 8px;">✏️</button>
-            <button class="step-btn" onclick="duplicateField(${fieldIndex})" title="Duplicar" style="margin-right: 8px;">📄</button>
-            ${fieldControls}
-          </div>
-          
-          <div class="dynamic-list">
-            ${field.items.map((item, itemIndex) => `
-              <div class="list-item">
-                <input type="text" value="${escapeHtml(item)}" placeholder="Nuevo elemento..." 
-                       oninput="updateListItem(${fieldIndex}, ${itemIndex}, this.value)">
-                <div class="list-item-controls">
-                  ${itemIndex > 0 ? `<button class="btn-small" onclick="moveListItem(${fieldIndex}, ${itemIndex}, -1)" title="Subir">↑</button>` : ''}
-                  ${itemIndex < field.items.length - 1 ? `<button class="btn-small" onclick="moveListItem(${fieldIndex}, ${itemIndex}, 1)" title="Bajar">↓</button>` : ''}
-                  <button class="btn-small btn-danger" onclick="removeListItem(${fieldIndex}, ${itemIndex})">×</button>
-                </div>
-              </div>
-            `).join('')}
-            <button type="button" class="btn-small" onclick="addListItem(${fieldIndex})">➕ Agregar Elemento</button>
-          </div>
-        </div>
-      `;
+    const outputPanel = document.querySelector('.panel.output');
+    const outputElement = document.getElementById('output');
+    
+    if (!outputPanel || !outputElement) {
+      console.warn('No se encontró el panel de salida');
+      return;
     }
-    return '';
-  }).join('');
+    
+    const searchPatterns = this.generateSearchPatterns(field);
+    let fieldDescription = this.getFieldDescription(field);
+    
+    if (searchPatterns.length === 0) {
+      const sectionName = currentSection.name;
+      const escapedSection = TextUtils.escapeRegex(sectionName);
+      searchPatterns.push(new RegExp(`<span class="output-section">${escapedSection}:</span>`, 'i'));
+      fieldDescription = `Sección: "${sectionName}"`;
+    }
+    
+    const match = this.findFirstMatch(outputElement.innerHTML, searchPatterns);
+    
+    if (match) {
+      this.scrollToMatch(outputPanel, outputElement, match);
+      this.showFieldScrollFeedback(fieldDescription, true);
+    } else {
+      this.scrollToSectionInOutput();
+      this.showFieldScrollFeedback(fieldDescription, false);
+    }
+  }
+
+  scrollToSectionInOutput() {
+    const currentSectionName = state.sections[state.currentSection].name;
+    const outputPanel = document.querySelector('.panel.output');
+    const outputElement = document.getElementById('output');
+    
+    if (!outputPanel || !outputElement) {
+      console.warn('No se encontró el panel de salida');
+      return;
+    }
+    
+    const outputContent = outputElement.innerHTML;
+    const sectionPattern = new RegExp(`<span class="output-section">${TextUtils.escapeRegex(currentSectionName)}:</span>`, 'i');
+    const match = sectionPattern.exec(outputContent);
+    
+    if (match) {
+      this.scrollToMatch(outputPanel, outputElement, match);
+      this.showFieldScrollFeedback(`Sección: "${currentSectionName}"`, true);
+    } else {
+      outputPanel.scrollTo({ top: 0, behavior: 'smooth' });
+      this.showFieldScrollFeedback(`Sección: "${currentSectionName}"`, false);
+    }
+  }
+
+  // ==========================================
+  // RENDERIZADO
+  // ==========================================
+
+  renderSections() {
+    const selector = document.getElementById('section-selector');
+    selector.innerHTML = state.sections.map((section, index) => 
+      `<option value="${index}" ${index === state.currentSection ? 'selected' : ''}>${TextUtils.escapeHtml(section.name)}</option>`
+    ).join('');
+    
+    if (document.getElementById('section-name')) {
+      document.getElementById('section-name').value = state.sections[state.currentSection].name;
+    }
+    
+    this.renderSectionControls();
+  }
+
+  renderSectionControls() {
+    const container = document.getElementById('section-controls');
+    if (!container) return;
+    
+    let controlsHTML = `
+      <button type="button" class="btn-small" onclick="sectionManager.addSection()">➕ Nueva Sección</button>
+      <button type="button" class="btn-small" onclick="sectionManager.duplicateSection()">📄 Duplicar</button>
+      <button type="button" class="btn-small btn-danger" onclick="sectionManager.deleteSection()">🗑️ Eliminar</button>
+    `;
+    
+    if (state.sections.length > 1) {
+      if (state.currentSection > 0) {
+        controlsHTML += `<button type="button" class="btn-small" onclick="sectionManager.moveSection(-1)">⬆️ Subir</button>`;
+      }
+      if (state.currentSection < state.sections.length - 1) {
+        controlsHTML += `<button type="button" class="btn-small" onclick="sectionManager.moveSection(1)">⬇️ Bajar</button>`;
+      }
+    }
+    
+    container.innerHTML = controlsHTML;
+  }
+
+  renderSectionContent() {
+    const container = document.getElementById('section-content-container');
+    const currentSection = state.sections[state.currentSection];
+    
+    container.innerHTML = currentSection.fields.map((field, fieldIndex) => 
+      this.renderField(field, fieldIndex, currentSection.fields.length)
+    ).join('');
+    
+    // Aplicar auto-resize si está disponible
+    if (window.autoResizeSystem) {
+      setTimeout(() => window.autoResizeSystem.resizeAll(), 10);
+    }
+  }
+
+  renderField(field, fieldIndex, totalFields) {
+    const fieldControls = this.renderFieldControls(fieldIndex, totalFields);
+    
+    const fieldRenderers = {
+      'h1': () => this.renderHeaderField(field, fieldIndex, 'h1', fieldControls),
+      'h2': () => this.renderHeaderField(field, fieldIndex, 'h2', fieldControls),
+      'h3': () => this.renderHeaderField(field, fieldIndex, 'h3', fieldControls),
+      'text': () => this.renderTextField(field, fieldIndex, fieldControls),
+      'textarea': () => this.renderTextAreaField(field, fieldIndex, fieldControls),
+      'list': () => this.renderListField(field, fieldIndex, fieldControls)
+    };
+
+    const renderer = fieldRenderers[field.type];
+    return renderer ? renderer() : '';
+  }
+
+  renderFieldControls(fieldIndex, totalFields) {
+    return `
+      <div class="step-controls">
+        ${fieldIndex > 0 ? `<button class="step-btn" onclick="sectionManager.moveField(${fieldIndex}, -1)" title="Subir">↑</button>` : ''}
+        ${fieldIndex < totalFields - 1 ? `<button class="step-btn" onclick="sectionManager.moveField(${fieldIndex}, 1)" title="Bajar">↓</button>` : ''}
+        <button class="step-btn" onclick="sectionManager.scrollToFieldInOutput(${fieldIndex})" title="Ir a este campo específico en el resultado" style="background: #6366f1; color: white;">📍</button>
+        <button class="step-btn btn-danger" onclick="sectionManager.removeField(${fieldIndex})" title="Eliminar">×</button>
+      </div>
+    `;
+  }
+
+  renderHeaderField(field, fieldIndex, type, fieldControls) {
+    const typeConfig = {
+      'h1': { icon: '📰', name: 'H1', color: '#2563eb' },
+      'h2': { icon: '📝', name: 'H2', color: '#7c3aed' },
+      'h3': { icon: '📄', name: 'H3', color: '#059669' }
+    };
+    
+    const config = typeConfig[type];
+    
+    return `
+      <div class="step">
+        <div class="step-header">
+          <span class="step-number type-${type}">${config.icon} ${config.name}</span>
+          <button class="step-btn" onclick="sectionManager.duplicateField(${fieldIndex})" title="Duplicar" style="margin-right: 8px;">📄</button>
+          ${fieldControls}
+        </div>
+        
+        <div class="form-group">
+          <input type="text" value="${TextUtils.escapeHtml(field.value || '')}" 
+                 placeholder="Texto del encabezado..." 
+                 oninput="sectionManager.updateHeaderValue(${fieldIndex}, this.value)">
+        </div>
+      </div>
+    `;
+  }
+
+  renderTextField(field, fieldIndex, fieldControls) {
+    if (!field.items) field.items = [field.value || ''];
+    
+    return `
+      <div class="step">
+        <div class="step-header">
+          <span class="step-number type-text">📝 ${TextUtils.escapeHtml(field.label)}</span>
+          <button class="step-btn" onclick="sectionManager.editFieldLabel(${fieldIndex})" title="Editar nombre" style="margin-right: 8px;">✏️</button>
+          <button class="step-btn" onclick="sectionManager.duplicateField(${fieldIndex})" title="Duplicar" style="margin-right: 8px;">📄</button>
+          ${fieldControls}
+        </div>
+        
+        <div class="dynamic-list">
+          ${this.renderTextItems(field.items, fieldIndex)}
+          <button type="button" class="btn-small" onclick="sectionManager.addTextItem(${fieldIndex})">➕ Agregar Elemento</button>
+        </div>
+      </div>
+    `;
+  }
+
+  renderTextAreaField(field, fieldIndex, fieldControls) {
+    return `
+      <div class="step">
+        <div class="step-header">
+          <span class="step-number type-textarea">📄 ${TextUtils.escapeHtml(field.label)}</span>
+          <button class="step-btn" onclick="sectionManager.editFieldLabel(${fieldIndex})" title="Editar nombre" style="margin-right: 8px;">✏️</button>
+          <button class="step-btn" onclick="sectionManager.duplicateField(${fieldIndex})" title="Duplicar" style="margin-right: 8px;">📄</button>
+          ${fieldControls}
+        </div>
+        
+        <div class="form-group">
+          <textarea class="autoresize max-height" placeholder="Ingresa el texto..." 
+                    oninput="sectionManager.updateTextField(${fieldIndex}, this.value)">${TextUtils.escapeHtml(field.value)}</textarea>
+        </div>
+      </div>
+    `;
+  }
+
+  renderListField(field, fieldIndex, fieldControls) {
+    return `
+      <div class="step">
+        <div class="step-header">
+          <span class="step-number type-list">📋 ${TextUtils.escapeHtml(field.label)}</span>
+          <button class="step-btn" onclick="sectionManager.editFieldLabel(${fieldIndex})" title="Editar nombre" style="margin-right: 8px;">✏️</button>
+          <button class="step-btn" onclick="sectionManager.duplicateField(${fieldIndex})" title="Duplicar" style="margin-right: 8px;">📄</button>
+          ${fieldControls}
+        </div>
+        
+        <div class="dynamic-list">
+          ${this.renderListItems(field.items, fieldIndex)}
+          <button type="button" class="btn-small" onclick="sectionManager.addListItem(${fieldIndex})">➕ Agregar Elemento</button>
+        </div>
+      </div>
+    `;
+  }
+
+  renderTextItems(items, fieldIndex) {
+    return items.map((item, itemIndex) => `
+      <div class="list-item">
+        <input type="text" value="${TextUtils.escapeHtml(item)}" placeholder="Nuevo elemento..." 
+               oninput="sectionManager.updateTextItem(${fieldIndex}, ${itemIndex}, this.value)">
+        <div class="list-item-controls">
+          ${itemIndex > 0 ? `<button class="btn-small" onclick="sectionManager.moveTextItem(${fieldIndex}, ${itemIndex}, -1)" title="Subir">↑</button>` : ''}
+          ${itemIndex < items.length - 1 ? `<button class="btn-small" onclick="sectionManager.moveTextItem(${fieldIndex}, ${itemIndex}, 1)" title="Bajar">↓</button>` : ''}
+          <button class="btn-small btn-danger" onclick="sectionManager.removeTextItem(${fieldIndex}, ${itemIndex})">×</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  renderListItems(items, fieldIndex) {
+    return items.map((item, itemIndex) => `
+      <div class="list-item">
+        <input type="text" value="${TextUtils.escapeHtml(item)}" placeholder="Nuevo elemento..." 
+               oninput="sectionManager.updateListItem(${fieldIndex}, ${itemIndex}, this.value)">
+        <div class="list-item-controls">
+          ${itemIndex > 0 ? `<button class="btn-small" onclick="sectionManager.moveListItem(${fieldIndex}, ${itemIndex}, -1)" title="Subir">↑</button>` : ''}
+          ${itemIndex < items.length - 1 ? `<button class="btn-small" onclick="sectionManager.moveListItem(${fieldIndex}, ${itemIndex}, 1)" title="Bajar">↓</button>` : ''}
+          <button class="btn-small btn-danger" onclick="sectionManager.removeListItem(${fieldIndex}, ${itemIndex})">×</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ==========================================
+  // MÉTODOS DE UTILIDAD PRIVADOS
+  // ==========================================
+
+  duplicateWithSuffix(section, newName) {
+    const duplicated = JSON.parse(JSON.stringify(section));
+    duplicated.name = newName;
+    
+    duplicated.fields.forEach(field => {
+      if (field.label && field.label.trim()) {
+        field.label = field.label + " - Copia";
+      }
+      
+      switch (field.type) {
+        case 'h1':
+        case 'h2':
+        case 'h3':
+        case 'textarea':
+          if (field.value && field.value.trim()) {
+            field.value = field.value + " - Copia";
+          }
+          break;
+        case 'text':
+        case 'list':
+          if (field.items && field.items.length > 0) {
+            field.items = field.items.map(item => {
+              if (typeof item === 'string' && item.trim()) {
+                return item + " - Copia";
+              }
+              return item;
+            });
+          }
+          break;
+      }
+    });
+    
+    return duplicated;
+  }
+
+  duplicateFieldWithSuffix(field) {
+    const duplicated = JSON.parse(JSON.stringify(field));
+    
+    if (duplicated.label && duplicated.label.trim()) {
+      duplicated.label = duplicated.label + " - Copia";
+    }
+    
+    switch (duplicated.type) {
+      case 'h1':
+      case 'h2':
+      case 'h3':
+      case 'textarea':
+        if (duplicated.value && duplicated.value.trim()) {
+          duplicated.value = duplicated.value + " - Copia";
+        }
+        break;
+      case 'text':
+      case 'list':
+        if (duplicated.items && duplicated.items.length > 0) {
+          duplicated.items = duplicated.items.map(item => {
+            if (typeof item === 'string' && item.trim()) {
+              return item + " - Copia";
+            }
+            return item;
+          });
+        }
+        break;
+    }
+    
+    return duplicated;
+  }
+
+  generateSearchPatterns(field) {
+    const patterns = [];
+    
+    if (field.type === 'h1' || field.type === 'h2' || field.type === 'h3') {
+      if (field.value && field.value.trim()) {
+        const escapedValue = TextUtils.escapeRegex(field.value.trim());
+        patterns.push(new RegExp(`<span class="output-${field.type}">${escapedValue}</span>`, 'i'));
+      }
+    } else if (field.type === 'text' && field.items) {
+      const firstItem = field.items.find(item => item.trim());
+      if (firstItem) {
+        const escapedItem = TextUtils.escapeRegex(firstItem.trim());
+        patterns.push(new RegExp(`- ${escapedItem}`, 'i'));
+      }
+    } else if (field.type === 'textarea' && field.value) {
+      const escapedValue = TextUtils.escapeRegex(field.value.trim());
+      patterns.push(new RegExp(escapedValue, 'i'));
+    } else if (field.type === 'list' && field.items) {
+      const firstItem = field.items.find(item => item.trim());
+      if (firstItem) {
+        const escapedItem = TextUtils.escapeRegex(firstItem.trim());
+        patterns.push(new RegExp(`<span class="output-step-number">1\\.</span> ${escapedItem}`, 'i'));
+      }
+    }
+    
+    return patterns;
+  }
+
+  getFieldDescription(field) {
+    if (field.type === 'h1' || field.type === 'h2' || field.type === 'h3') {
+      return `${field.type.toUpperCase()}: "${field.value?.trim() || ''}"`;
+    } else if (field.type === 'text' && field.items) {
+      const firstItem = field.items.find(item => item.trim());
+      return `${field.label}: "${firstItem?.trim() || ''}"`;
+    } else if (field.type === 'textarea' && field.value) {
+      return `${field.label}: "${TextUtils.truncate(field.value.trim(), 30)}"`;
+    } else if (field.type === 'list' && field.items) {
+      const firstItem = field.items.find(item => item.trim());
+      return `${field.label}: "${firstItem?.trim() || ''}"`;
+    }
+    return `Campo: ${field.label || 'Sin nombre'}`;
+  }
+
+  findFirstMatch(content, patterns) {
+    for (const pattern of patterns) {
+      const match = pattern.exec(content);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  scrollToMatch(outputPanel, outputElement, match) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = outputElement.innerHTML.substring(0, match.index);
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.visibility = 'hidden';
+    tempDiv.style.whiteSpace = 'pre-wrap';
+    tempDiv.style.fontFamily = outputElement.style.fontFamily || "'Consolas', 'Monaco', 'Courier New', monospace";
+    tempDiv.style.fontSize = outputElement.style.fontSize || '14px';
+    tempDiv.style.lineHeight = outputElement.style.lineHeight || '1.6';
+    tempDiv.style.width = outputElement.offsetWidth + 'px';
+    
+    document.body.appendChild(tempDiv);
+    const targetHeight = tempDiv.offsetHeight;
+    document.body.removeChild(tempDiv);
+    
+    outputPanel.scrollTo({
+      top: Math.max(0, targetHeight),
+      behavior: 'smooth'
+    });
+  }
+
+  showFieldScrollFeedback(fieldDescription, found = true) {
+    // Limpiar timeout anterior
+    if (this.scrollFeedbackTimeout) {
+      clearTimeout(this.scrollFeedbackTimeout);
+    }
+
+    const outputPanel = document.querySelector('.panel.output');
+    if (!outputPanel) return;
+    
+    const panelRect = outputPanel.getBoundingClientRect();
+    const textPosition = panelRect.top + 30;
+    const leftPosition = panelRect.left + 20;
+    
+    const feedback = document.createElement('div');
+    feedback.style.cssText = `
+      position: fixed; top: ${textPosition}px; left: ${leftPosition}px;
+      background: ${found ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #f59e0b, #d97706)'};
+      color: white; padding: 8px 12px; border-radius: 6px; font-size: 11px; font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); z-index: 1000; opacity: 0;
+      transition: all 0.3s ease; max-width: 240px; text-align: left; line-height: 1.2;
+      transform: translateY(-10px);
+    `;
+    
+    feedback.innerHTML = `
+      ${found ? '📍 <strong>Aquí:</strong>' : '🔍 <strong>No visible:</strong>'}<br>
+      <span style="font-size: 10px;">${fieldDescription}</span>
+    `;
+    
+    document.body.appendChild(feedback);
+    
+    setTimeout(() => {
+      feedback.style.opacity = '1';
+      feedback.style.transform = 'translateY(0)';
+    }, 10);
+    
+    this.scrollFeedbackTimeout = setTimeout(() => {
+      feedback.style.opacity = '0';
+      feedback.style.transform = 'translateY(-10px)';
+      setTimeout(() => {
+        if (feedback.parentNode) {
+          feedback.parentNode.removeChild(feedback);
+        }
+      }, 300);
+    }, 3000);
+  }
+
+  updateUI() {
+    this.renderSectionContent();
+    this.updatePrompt();
+    this.scheduleAutoSave();
+  }
+
+  debouncedUpdate() {
+    TimingUtils.debounce('sectionUpdate', () => {
+      this.updatePrompt();
+      this.scheduleAutoSave();
+    }, 300);
+  }
+
+  updatePrompt() {
+    if (window.updatePrompt) {
+      window.updatePrompt();
+    }
+  }
+
+  scheduleAutoSave() {
+    if (window.scheduleAutoSave) {
+      window.scheduleAutoSave();
+    }
+  }
 }
+
+// Instancia global
+const sectionManager = new SectionManager();
+
+// Exportar globalmente
+window.sectionManager = sectionManager;
+
+// Configurar renderizado en RenderUtils
+RenderUtils.renderSections = () => sectionManager.renderSections();
+RenderUtils.renderSectionContent = () => sectionManager.renderSectionContent();
+
+// Funciones legacy para compatibilidad (redirigen a sectionManager)
+window.addSection = () => sectionManager.addSection();
+window.duplicateSection = () => sectionManager.duplicateSection();
+window.deleteSection = () => sectionManager.deleteSection();
+window.changeSection = () => sectionManager.changeSection();
+window.renameSection = () => sectionManager.renameSection();
+window.moveSection = (direction) => sectionManager.moveSection(direction);
+window.addField = (fieldType) => sectionManager.addField(fieldType);
+window.editFieldLabel = (fieldIndex) => sectionManager.editFieldLabel(fieldIndex);
+window.duplicateField = (fieldIndex) => sectionManager.duplicateField(fieldIndex);
+window.removeField = (fieldIndex) => sectionManager.removeField(fieldIndex);
+window.moveField = (fieldIndex, direction) => sectionManager.moveField(fieldIndex, direction);
+window.updateHeaderValue = (fieldIndex, value) => sectionManager.updateHeaderValue(fieldIndex, value);
+window.updateTextField = (fieldIndex, value) => sectionManager.updateTextField(fieldIndex, value);
+window.addTextItem = (fieldIndex) => sectionManager.addTextItem(fieldIndex);
+window.removeTextItem = (fieldIndex, itemIndex) => sectionManager.removeTextItem(fieldIndex, itemIndex);
+window.moveTextItem = (fieldIndex, itemIndex, direction) => sectionManager.moveTextItem(fieldIndex, itemIndex, direction);
+window.updateTextItem = (fieldIndex, itemIndex, value) => sectionManager.updateTextItem(fieldIndex, itemIndex, value);
+window.addListItem = (fieldIndex) => sectionManager.addListItem(fieldIndex);
+window.removeListItem = (fieldIndex, itemIndex) => sectionManager.removeListItem(fieldIndex, itemIndex);
+window.moveListItem = (fieldIndex, itemIndex, direction) => sectionManager.moveListItem(fieldIndex, itemIndex, direction);
+window.updateListItem = (fieldIndex, itemIndex, value) => sectionManager.updateListItem(fieldIndex, itemIndex, value);
+window.scrollToFieldInOutput = (fieldIndex) => sectionManager.scrollToFieldInOutput(fieldIndex);
+window.scrollToSectionInOutput = () => sectionManager.scrollToSectionInOutput();
+window.renderSections = () => sectionManager.renderSections();
+window.renderSectionContent = () => sectionManager.renderSectionContent();
