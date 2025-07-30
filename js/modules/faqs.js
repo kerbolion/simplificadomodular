@@ -110,13 +110,13 @@ class FAQManager {
         <button class="delete-btn" onclick="faqManager.removeFAQ(${index})">×</button>
         
         <label>Pregunta:</label>
-        <input type="text" value="${TextUtils.escapeHtml(faq.question)}" placeholder="Pregunta frecuente..."
+        <input type="text" value="${TextUtils.escapeForAttribute(faq.question)}" placeholder="Pregunta frecuente..."
                oninput="faqManager.updateFAQ(${index}, 'question', this.value)" style="margin-bottom: 8px;">
         
         <label>Respuesta:</label>
         <textarea class="autoresize max-height" 
                   placeholder="Respuesta..." 
-                  oninput="faqManager.updateFAQ(${index}, 'answer', this.value)">${TextUtils.escapeHtml(faq.answer)}</textarea>
+                  oninput="faqManager.updateFAQ(${index}, 'answer', this.value)">${TextUtils.escapeForInputValue(faq.answer)}</textarea>
       </div>
     `;
   }

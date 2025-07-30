@@ -11,6 +11,19 @@ const TextUtils = {
     return div.innerHTML;
   },
 
+  // Nueva función para escapar solo para atributos HTML (solo escapa comillas dobles)
+  escapeForAttribute(text) {
+    if (typeof text !== 'string') return '';
+    return text.replace(/"/g, '&quot;');
+  },
+
+  // Nueva función para valores de input (NO escapa comillas)
+  escapeForInputValue(text) {
+    if (typeof text !== 'string') return '';
+    // Solo escapa caracteres que pueden romper el HTML, pero NO las comillas
+    return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  },
+
   escapeRegex(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   },

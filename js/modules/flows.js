@@ -277,7 +277,7 @@ class FlowManager {
           <label>Mensaje del paso:</label>
           <textarea class="autoresize max-height" 
                     placeholder="Descripción de lo que debe hacer el asistente en este paso..." 
-                    oninput="flowManager.updateStepText(${index}, this.value)">${TextUtils.escapeHtml(step.text)}</textarea>
+                    oninput="flowManager.updateStepText(${index}, this.value)">${TextUtils.escapeForInputValue(step.text)}</textarea>
         </div>
         
         ${this.renderStepFunctions(index, step.functions)}
@@ -408,14 +408,14 @@ class FlowManager {
               <div class="form-group">
                 <label>${param.label}${required}:</label>
                 <textarea class="autoresize max-height" placeholder="Ingresa ${param.label.toLowerCase()}..." 
-                          oninput="stepFunctionManager.updateFunctionParam(${stepIndex}, ${funcIndex}, '${param.name}', this.value)">${TextUtils.escapeHtml(value)}</textarea>
+                          oninput="stepFunctionManager.updateFunctionParam(${stepIndex}, ${funcIndex}, '${param.name}', this.value)">${TextUtils.escapeForInputValue(value)}</textarea>
               </div>
             `;
           } else {
             return `
               <div class="form-group">
                 <label>${param.label}${required}:</label>
-                <input type="text" value="${TextUtils.escapeHtml(value)}" 
+                <input type="text" value="${TextUtils.escapeForAttribute(value)}" 
                        placeholder="Ingresa ${param.label.toLowerCase()}..."
                        oninput="stepFunctionManager.updateFunctionParam(${stepIndex}, ${funcIndex}, '${param.name}', this.value)">
               </div>
@@ -442,7 +442,7 @@ class FlowManager {
               
               <div class="form-group">
                 <label>Nombre del campo:</label>
-                <input type="text" value="${TextUtils.escapeHtml(field.name || '')}" 
+                <input type="text" value="${TextUtils.escapeForAttribute(field.name || '')}" 
                        placeholder="Ej: nombre_formulario, whatsapp, mensaje..."
                        oninput="stepFunctionManager.updateCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, 'name', this.value)">
               </div>
@@ -451,7 +451,7 @@ class FlowManager {
                 <label>Valor:</label>
                 <textarea class="autoresize max-height" 
                           placeholder="Valor del campo..." 
-                          oninput="stepFunctionManager.updateCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, 'value', this.value)">${TextUtils.escapeHtml(field.value || '')}</textarea>
+                          oninput="stepFunctionManager.updateCustomField(${stepIndex}, ${funcIndex}, ${fieldIndex}, 'value', this.value)">${TextUtils.escapeForInputValue(field.value || '')}</textarea>
               </div>
             </div>
           `;

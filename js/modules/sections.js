@@ -432,7 +432,7 @@ class SectionManager {
         </div>
         
         <div class="form-group">
-          <input type="text" value="${TextUtils.escapeHtml(field.value || '')}" 
+          <input type="text" value="${TextUtils.escapeForAttribute(field.value || '')}" 
                  placeholder="Texto del encabezado..." 
                  oninput="sectionManager.updateHeaderValue(${fieldIndex}, this.value)">
         </div>
@@ -472,7 +472,7 @@ class SectionManager {
         
         <div class="form-group">
           <textarea class="autoresize max-height" placeholder="Ingresa el texto..." 
-                    oninput="sectionManager.updateTextField(${fieldIndex}, this.value)">${TextUtils.escapeHtml(field.value)}</textarea>
+                    oninput="sectionManager.updateTextField(${fieldIndex}, this.value)">${TextUtils.escapeForInputValue(field.value)}</textarea>
         </div>
       </div>
     `;
@@ -499,7 +499,7 @@ class SectionManager {
   renderTextItems(items, fieldIndex) {
     return items.map((item, itemIndex) => `
       <div class="list-item">
-        <input type="text" value="${TextUtils.escapeHtml(item)}" placeholder="Nuevo elemento..." 
+        <input type="text" value="${TextUtils.escapeForAttribute(item)}" placeholder="Nuevo elemento..." 
                oninput="sectionManager.updateTextItem(${fieldIndex}, ${itemIndex}, this.value)">
         <div class="list-item-controls">
           ${itemIndex > 0 ? `<button class="btn-small" onclick="sectionManager.moveTextItem(${fieldIndex}, ${itemIndex}, -1)" title="Subir">↑</button>` : ''}
@@ -513,7 +513,7 @@ class SectionManager {
   renderListItems(items, fieldIndex) {
     return items.map((item, itemIndex) => `
       <div class="list-item">
-        <input type="text" value="${TextUtils.escapeHtml(item)}" placeholder="Nuevo elemento..." 
+        <input type="text" value="${TextUtils.escapeForAttribute(item)}" placeholder="Nuevo elemento..." 
                oninput="sectionManager.updateListItem(${fieldIndex}, ${itemIndex}, this.value)">
         <div class="list-item-controls">
           ${itemIndex > 0 ? `<button class="btn-small" onclick="sectionManager.moveListItem(${fieldIndex}, ${itemIndex}, -1)" title="Subir">↑</button>` : ''}

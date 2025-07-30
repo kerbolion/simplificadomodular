@@ -388,10 +388,10 @@ class GlobalOrderingManager {
   // ==========================================
 
   setupHooks() {
-    // Hook para secciones - CORREGIDO
+    // Hook para secciones
     this.hookSectionOperations();
     
-    // Hook para flujos - CORREGIDO  
+    // Hook para flujos  
     this.hookFlowOperations();
     
     // Hook para FAQs
@@ -402,26 +402,23 @@ class GlobalOrderingManager {
   }
 
   hookSectionOperations() {
-    // Interceptar cuando sectionManager hace cambios
+    // Los hooks se mantienen iguales
     if (window.sectionManager) {
       const originalAddSection = window.sectionManager.addSection.bind(window.sectionManager);
       window.sectionManager.addSection = () => {
         originalAddSection();
-        // Sincronizar después de agregar
         setTimeout(() => this.syncElementChanges(), 100);
       };
 
       const originalDuplicateSection = window.sectionManager.duplicateSection.bind(window.sectionManager);
       window.sectionManager.duplicateSection = () => {
         originalDuplicateSection();
-        // Sincronizar después de duplicar
         setTimeout(() => this.syncElementChanges(), 100);
       };
 
       const originalRenameSection = window.sectionManager.renameSection.bind(window.sectionManager);
       window.sectionManager.renameSection = () => {
         originalRenameSection();
-        // Sincronizar después de renombrar
         setTimeout(() => this.syncElementChanges(), 100);
       };
     }
@@ -433,21 +430,18 @@ class GlobalOrderingManager {
       const originalAddFlow = window.flowManager.addFlow.bind(window.flowManager);
       window.flowManager.addFlow = () => {
         originalAddFlow();
-        // Sincronizar después de agregar
         setTimeout(() => this.syncElementChanges(), 100);
       };
 
       const originalDuplicateFlow = window.flowManager.duplicateFlow.bind(window.flowManager);
       window.flowManager.duplicateFlow = () => {
         originalDuplicateFlow();
-        // Sincronizar después de duplicar
         setTimeout(() => this.syncElementChanges(), 100);
       };
 
       const originalRenameFlow = window.flowManager.renameFlow.bind(window.flowManager);
       window.flowManager.renameFlow = () => {
         originalRenameFlow();
-        // Sincronizar después de renombrar
         setTimeout(() => this.syncElementChanges(), 100);
       };
     }
@@ -484,78 +478,6 @@ class GlobalOrderingManager {
         this.syncElementChanges();
       }
     }, 2000); // Verificar cada 2 segundos
-  }
-
-  // ==========================================
-  // SINCRONIZACIÓN DE CAMBIOS ESPECÍFICOS
-  // ==========================================
-
-  syncSectionChange(action, sectionIndex, sectionName) {
-    if (!state.globalOrder) return;
-    
-    switch (action) {
-      case 'add':
-        this.addElement('section', sectionIndex, sectionName);
-        break;
-        
-      case 'remove':
-        const indexToRemove = state.globalOrder.findIndex(
-          item => item.type === 'section' && item.id === sectionIndex
-        );
-        if (indexToRemove !== -1) {
-          this.removeElement(indexToRemove);
-        }
-        // Actualizar IDs de secciones posteriores
-        state.globalOrder.forEach(item => {
-          if (item.type === 'section' && item.id > sectionIndex) {
-            item.id--;
-          }
-        });
-        break;
-        
-      case 'rename':
-        const indexToUpdate = state.globalOrder.findIndex(
-          item => item.type === 'section' && item.id === sectionIndex
-        );
-        if (indexToUpdate !== -1) {
-          this.updateElement(indexToUpdate, sectionName);
-        }
-        break;
-    }
-  }
-
-  syncFlowChange(action, flowIndex, flowName) {
-    if (!state.globalOrder) return;
-    
-    switch (action) {
-      case 'add':
-        this.addElement('flow', flowIndex, flowName);
-        break;
-        
-      case 'remove':
-        const indexToRemove = state.globalOrder.findIndex(
-          item => item.type === 'flow' && item.id === flowIndex
-        );
-        if (indexToRemove !== -1) {
-          this.removeElement(indexToRemove);
-        }
-        // Actualizar IDs de flujos posteriores
-        state.globalOrder.forEach(item => {
-          if (item.type === 'flow' && item.id > flowIndex) {
-            item.id--;
-          }
-        });
-        break;
-        
-      case 'rename':
-        const indexToUpdate = state.globalOrder.findIndex(
-          item => item.type === 'flow' && item.id === flowIndex
-        );
-        if (indexToUpdate !== -1) {
-          this.updateElement(indexToUpdate, flowName);
-        }
-        break;
-    }
   }
 
   // ==========================================
