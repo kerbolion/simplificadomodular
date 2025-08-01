@@ -1,5 +1,5 @@
 // ==========================================
-// EVENTOS E INICIALIZACIÓN CORREGIDA
+// EVENTOS E INICIALIZACIÓN CORREGIDA CON AUTO-RESIZE
 // ==========================================
 
 class EventManager {
@@ -126,7 +126,7 @@ class EventManager {
 const eventManager = new EventManager();
 
 // ==========================================
-// INICIALIZACIÓN PRINCIPAL CORREGIDA
+// INICIALIZACIÓN PRINCIPAL CORREGIDA CON AUTO-RESIZE
 // ==========================================
 
 class AppInitializer {
@@ -164,7 +164,7 @@ class AppInitializer {
       // 5. Renderizar interfaz inicial
       this.renderInitialUI();
 
-      // 6. Inicializar UI avanzada con delay
+      // 6. Inicializar UI avanzada con delay (INCLUYE AUTO-RESIZE)
       setTimeout(() => {
         this.initializeAdvancedUI();
       }, 100);
@@ -247,6 +247,23 @@ class AppInitializer {
         window.globalOrderingUI.renderTab();
       }
 
+      // NUEVO: Inicializar sistema de auto-resize DESPUÉS de que todo esté renderizado
+      if (window.autoResizeSystem && window.autoResizeSystem.init) {
+        // Pequeño delay para asegurar que todos los elementos estén en el DOM
+        setTimeout(() => {
+          window.autoResizeSystem.init();
+          console.log('Auto-resize inicializado después del renderizado completo');
+          
+          // Forzar un redimensionamiento inicial de todos los textareas visibles
+          setTimeout(() => {
+            if (window.autoResizeSystem.resizeAllVisible) {
+              window.autoResizeSystem.resizeAllVisible();
+              console.log('Redimensionamiento inicial de textareas completado');
+            }
+          }, 100);
+        }, 200);
+      }
+
       // Aplicar mejoras visuales
       this.applyUIEnhancements();
     } catch (error) {
@@ -278,7 +295,7 @@ class AppInitializer {
 const appInitializer = new AppInitializer();
 
 // ==========================================
-// FUNCIONES DE PESTAÑAS CORREGIDAS
+// FUNCIONES DE PESTAÑAS CORREGIDAS CON AUTO-RESIZE
 // ==========================================
 
 function showTab(index) {
@@ -308,6 +325,75 @@ function showTab(index) {
     });
     state.currentTab = index;
   }
+  
+  // NUEVO: Redimensionar textareas después de cambiar pestaña
+  setTimeout(() => {
+    if (window.autoResizeSystem && window.autoResizeSystem.resizeAllVisible) {
+      window.autoResizeSystem.resizeAllVisible();
+    }
+  }, 150);
+}
+
+// ==========================================
+// SISTEMA DE AUTO-RESIZE INTEGRADO
+// ==========================================
+
+// Función para asegurar que el auto-resize funcione después de cambios de estado
+function ensureAutoResize() {
+  if (window.autoResizeSystem && window.autoResizeSystem.resizeAllVisible) {
+    // Usar un timeout para ejecutar después de que se complete el renderizado
+    setTimeout(() => {
+      window.autoResizeSystem.resizeAllVisible();
+    }, 100);
+  }
+}
+
+// Función específica para redimensionar después de renderizado
+function triggerAutoResizeAfterRender() {
+  if (window.autoResizeSystem && window.autoResizeSystem.resizeAllVisible) {
+    // Timeout más corto para casos donde sabemos que el contenido acaba de renderizarse
+    setTimeout(() => {
+      window.autoResizeSystem.resizeAllVisible();
+    }, 50);
+  }
+}
+
+// ==========================================
+// INTEGRACIÓN CON OBSERVADORES DE ESTADO
+// ==========================================
+
+function setupAutoResizeStateObservers() {
+  if (window.stateObserver) {
+    // Redimensionar cuando cambie el flujo actual
+    stateObserver.subscribe('currentFlow', () => {
+      console.log('Estado cambiado: currentFlow - redimensionando textareas');
+      ensureAutoResize();
+    });
+
+    // Redimensionar cuando cambie la sección actual
+    stateObserver.subscribe('currentSection', () => {
+      console.log('Estado cambiado: currentSection - redimensionando textareas');
+      ensureAutoResize();
+    });
+
+    // Redimensionar cuando cambien las FAQs
+    stateObserver.subscribe('faqs', () => {
+      console.log('Estado cambiado: faqs - redimensionando textareas');
+      triggerAutoResizeAfterRender();
+    });
+
+    // Redimensionar cuando cambien los flujos
+    stateObserver.subscribe('flows', () => {
+      console.log('Estado cambiado: flows - redimensionando textareas');
+      triggerAutoResizeAfterRender();
+    });
+
+    // Redimensionar cuando cambien las secciones
+    stateObserver.subscribe('sections', () => {
+      console.log('Estado cambiado: sections - redimensionando textareas');
+      triggerAutoResizeAfterRender();
+    });
+  }
 }
 
 // ==========================================
@@ -316,7 +402,17 @@ function showTab(index) {
 
 document.addEventListener('DOMContentLoaded', async function() {
   try {
+    console.log('DOM cargado - iniciando aplicación...');
+    
+    // Inicializar la aplicación principal
     await appInitializer.init();
+    
+    // Configurar observadores de auto-resize después de que todo esté inicializado
+    setTimeout(() => {
+      setupAutoResizeStateObservers();
+      console.log('Observadores de auto-resize configurados');
+    }, 500);
+    
   } catch (error) {
     console.error('Error fatal durante la inicialización:', error);
     // Mostrar mensaje de error al usuario
@@ -332,7 +428,16 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 });
 
+// ==========================================
+// EXPORTAR INSTANCIAS Y FUNCIONES GLOBALES
+// ==========================================
+
 // Exportar instancias globales
 window.eventManager = eventManager;
 window.appInitializer = appInitializer;
 window.showTab = showTab;
+
+// Exportar funciones de utilidad para auto-resize
+window.ensureAutoResize = ensureAutoResize;
+window.triggerAutoResizeAfterRender = triggerAutoResizeAfterRender;
+window.setupAutoResizeStateObservers = setupAutoResizeStateObservers;
