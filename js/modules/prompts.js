@@ -1,5 +1,5 @@
 // ==========================================
-// GENERACIÓN DE PROMPTS OPTIMIZADA
+// GENERACIÓN DE PROMPTS OPTIMIZADA CON ELEMENTOS DE TEXTO
 // ==========================================
 
 class PromptGenerator {
@@ -126,14 +126,50 @@ class PromptGenerator {
       
       html += `<span class="output-step-number">${stepIndex + 1}.</span> ${step.text}`;
       
-      // Agregar funciones del paso
+      // Agregar funciones y elementos de texto del paso
+      html += this.renderStepElements(step);
+      
+      html += '\n';
+    });
+    
+    return html;
+  }
+
+  renderStepElements(step) {
+    let html = '';
+    
+    // Verificar si el paso tiene el nuevo sistema de orden
+    if (step.elementOrder && step.elementOrder.length > 0) {
+      // Usar el orden definido en elementOrder
+      step.elementOrder.forEach(orderItem => {
+        if (orderItem.type === 'function' && step.functions && step.functions[orderItem.index]) {
+          const func = step.functions[orderItem.index];
+          html += this.renderStepFunction(func);
+        } else if (orderItem.type === 'text' && step.textElements && step.textElements[orderItem.index]) {
+          const textEl = step.textElements[orderItem.index];
+          if (textEl.text && textEl.text.trim()) {
+            html += `\n    <span class="output-comment">${textEl.text}</span>`;
+          }
+        }
+      });
+    } else {
+      // Sistema legacy: renderizar funciones primero, luego textos
+      // Renderizar funciones
       if (step.functions && step.functions.length > 0) {
         step.functions.forEach(func => {
           html += this.renderStepFunction(func);
         });
       }
-      html += '\n';
-    });
+      
+      // Renderizar elementos de texto
+      if (step.textElements && step.textElements.length > 0) {
+        step.textElements.forEach(textEl => {
+          if (textEl.text && textEl.text.trim()) {
+            html += `\n    <span class="output-comment">${textEl.text}</span>`;
+          }
+        });
+      }
+    }
     
     return html;
   }

@@ -1,5 +1,5 @@
 // ==========================================
-// GESTIÓN DE FLUJOS CORREGIDA
+// GESTIÓN DE FLUJOS CORREGIDA CON TEXTOS REORDENABLES
 // ==========================================
 
 class FlowManager {
@@ -16,7 +16,7 @@ class FlowManager {
     if (name && name.trim()) {
       state.flows.push({ 
         name: name.trim(), 
-        steps: [{ text: '', functions: [] }] 
+        steps: [{ text: '', functions: [], textElements: [] }] 
       });
       state.currentFlow = state.flows.length - 1;
       this.renderFlows();
@@ -96,7 +96,13 @@ class FlowManager {
   // ==========================================
 
   addStep() {
-    state.flows[state.currentFlow].steps.push({ text: '', functions: [] });
+    const newStep = { 
+      text: '', 
+      functions: [], 
+      textElements: [],
+      elementOrder: [] // Nuevo: orden de elementos
+    };
+    state.flows[state.currentFlow].steps.push(newStep);
     this.renderSteps();
     this.updatePrompt();
     this.scheduleAutoSave();
@@ -139,6 +145,215 @@ class FlowManager {
       this.updatePrompt();
       this.scheduleAutoSave();
     }, 300);
+  }
+
+  // ==========================================
+  // OPERACIONES DE ELEMENTOS DE TEXTO
+  // ==========================================
+
+  addTextElement(stepIndex) {
+    const step = state.flows[state.currentFlow].steps[stepIndex];
+    if (!step.textElements) step.textElements = [];
+    if (!step.elementOrder) step.elementOrder = [];
+    
+    const newTextIndex = step.textElements.length;
+    step.textElements.push({ text: '' });
+    
+    // Agregar al orden global
+    step.elementOrder.push({
+      type: 'text',
+      index: newTextIndex
+    });
+    
+    this.renderSteps();
+    this.scheduleAutoSave();
+  }
+
+  // Función para interceptar cuando se agregan funciones desde stepFunctionManager
+  onFunctionAdded(stepIndex, functionIndex) {
+    const step = state.flows[state.currentFlow].steps[stepIndex];
+    if (!step.elementOrder) step.elementOrder = [];
+    
+    // Agregar la nueva función al final del orden
+    step.elementOrder.push({
+      type: 'function',
+      index: functionIndex
+    });
+    
+    this.renderSteps();
+    this.updatePrompt();
+  }
+
+  duplicateTextElement(stepIndex, textIndex) {
+    const step = state.flows[state.currentFlow].steps[stepIndex];
+    if (!step.textElements) return;
+    
+    const textToDuplicate = step.textElements[textIndex];
+    const duplicatedText = this.duplicateTextElementWithSuffix(textToDuplicate);
+    
+    step.textElements.splice(textIndex + 1, 0, duplicatedText);
+    this.renderSteps();
+    this.updatePrompt();
+    this.scheduleAutoSave();
+  }
+
+  removeTextElement(stepIndex, textIndex) {
+    if (confirm("¿Eliminar este texto?")) {
+      const step = state.flows[state.currentFlow].steps[stepIndex];
+      step.textElements.splice(textIndex, 1);
+      this.renderSteps();
+      this.updatePrompt();
+      this.scheduleAutoSave();
+    }
+  }
+
+  moveTextElement(stepIndex, textIndex, direction) {
+    const step = state.flows[state.currentFlow].steps[stepIndex];
+    if (!step.textElements) return;
+    
+    const newIndex = textIndex + direction;
+    
+    if (newIndex >= 0 && newIndex < step.textElements.length) {
+      [step.textElements[textIndex], step.textElements[newIndex]] = [step.textElements[newIndex], step.textElements[textIndex]];
+      this.renderSteps();
+      this.updatePrompt();
+      this.scheduleAutoSave();
+    }
+  }
+
+  updateTextElement(stepIndex, textIndex, value) {
+    const step = state.flows[state.currentFlow].steps[stepIndex];
+    if (!step.textElements) step.textElements = [];
+    if (!step.textElements[textIndex]) step.textElements[textIndex] = {};
+    
+    step.textElements[textIndex].text = value;
+    TimingUtils.debounce('textElementUpdate', () => {
+      this.updatePrompt();
+      this.scheduleAutoSave();
+    }, 300);
+  }
+
+  // ==========================================
+  // REORDENAMIENTO MIXTO MEJORADO (FUNCIONES Y TEXTOS)
+  // ==========================================
+
+  getAllElements(stepIndex) {
+    const step = state.flows[state.currentFlow].steps[stepIndex];
+    const elements = [];
+    
+    // Agregar funciones con información de posición
+    if (step.functions) {
+      step.functions.forEach((func, index) => {
+        elements.push({
+          type: 'function',
+          originalIndex: index,
+          data: func,
+          sortKey: `function_${index}`
+        });
+      });
+    }
+    
+    // Agregar elementos de texto con información de posición
+    if (step.textElements) {
+      step.textElements.forEach((textEl, index) => {
+        elements.push({
+          type: 'text',
+          originalIndex: index,
+          data: textEl,
+          sortKey: `text_${index}`
+        });
+      });
+    }
+    
+    return elements;
+  }
+
+  getAllElementsOrdered(stepIndex) {
+    return this.getAllElements(stepIndex);
+  }
+
+  moveElementInStepGlobally(stepIndex, elementType, elementIndex, direction) {
+    const step = state.flows[state.currentFlow].steps[stepIndex];
+    
+    // Crear lista unificada de elementos con sus posiciones
+    const allElements = [];
+    
+    // Agregar funciones
+    if (step.functions) {
+      step.functions.forEach((func, index) => {
+        allElements.push({
+          type: 'function',
+          index: index,
+          data: func
+        });
+      });
+    }
+    
+    // Agregar textos
+    if (step.textElements) {
+      step.textElements.forEach((textEl, index) => {
+        allElements.push({
+          type: 'text',
+          index: index,
+          data: textEl
+        });
+      });
+    }
+    
+    // Encontrar el elemento actual en la lista unificada
+    let globalIndex = -1;
+    let functionsBeforeTarget = 0;
+    let textsBeforeTarget = 0;
+    
+    for (let i = 0; i < allElements.length; i++) {
+      const element = allElements[i];
+      
+      if (element.type === elementType && element.index === elementIndex) {
+        globalIndex = i;
+        break;
+      }
+      
+      if (element.type === 'function') {
+        functionsBeforeTarget++;
+      } else {
+        textsBeforeTarget++;
+      }
+    }
+    
+    if (globalIndex === -1) return; // No encontrado
+    
+    const newGlobalIndex = globalIndex + direction;
+    
+    // Verificar límites
+    if (newGlobalIndex < 0 || newGlobalIndex >= allElements.length) return;
+    
+    // Intercambiar elementos en la lista global
+    [allElements[globalIndex], allElements[newGlobalIndex]] = [allElements[newGlobalIndex], allElements[globalIndex]];
+    
+    // Reconstruir arrays separados
+    const newFunctions = [];
+    const newTextElements = [];
+    
+    allElements.forEach(element => {
+      if (element.type === 'function') {
+        newFunctions.push(element.data);
+      } else {
+        newTextElements.push(element.data);
+      }
+    });
+    
+    // Actualizar el estado
+    step.functions = newFunctions;
+    step.textElements = newTextElements;
+    
+    this.renderSteps();
+    this.updatePrompt();
+    this.scheduleAutoSave();
+  }
+
+  moveElementInStep(elementType, stepIndex, elementIndex, direction) {
+    // Usar el nuevo sistema de reordenamiento global
+    this.moveElementInStepGlobally(stepIndex, elementType, elementIndex, direction);
   }
 
   // ==========================================
@@ -266,6 +481,12 @@ class FlowManager {
   renderStep(step, index, totalSteps) {
     const stepControls = this.renderStepControls(index, totalSteps);
     
+    // Asegurar que step.textElements existe
+    if (!step.textElements) step.textElements = [];
+    
+    const allElements = this.getAllElements(index);
+    const elementCount = step.functions.length + step.textElements.length;
+    
     return `
       <div class="step">
         <div class="step-header">
@@ -274,15 +495,350 @@ class FlowManager {
         </div>
         
         <div class="form-group">
-          <label>Mensaje del paso:</label>
+          <label>Mensaje principal del paso:</label>
           <textarea class="autoresize max-height" 
                     placeholder="Descripción de lo que debe hacer el asistente en este paso..." 
                     oninput="flowManager.updateStepText(${index}, this.value)">${TextUtils.escapeForInputValue(step.text)}</textarea>
         </div>
         
-        ${this.renderStepFunctions(index, step.functions)}
+        <div style="margin-top: 16px;">
+          <label class="step-elements-count">
+            📋 Elementos del paso<span class="count-number">${elementCount}</span>:
+          </label>
+          
+          <div id="step-elements-${index}" style="margin-bottom: 12px;">
+            ${this.renderStepElements(index, step)}
+          </div>
+          
+          <div class="step-add-elements">
+            <button type="button" class="btn-small btn-add-function" onclick="stepFunctionManager.addFunction(${index})">
+              <span>⚡</span>
+              <span>Agregar Función</span>
+            </button>
+            <button type="button" class="btn-small btn-add-text" onclick="flowManager.addTextElement(${index})">
+              <span>📝</span>
+              <span>Agregar Texto</span>
+            </button>
+          </div>
+        </div>
       </div>
     `;
+  }
+
+  renderStepElements(stepIndex, step) {
+    let elementsHTML = '';
+    
+    // Asegurar que los arrays existen
+    if (!step.functions) step.functions = [];
+    if (!step.textElements) step.textElements = [];
+    if (!step.elementOrder) {
+      // Migrar paso existente sin orden
+      step.elementOrder = [];
+      
+      // Agregar funciones existentes al orden
+      step.functions.forEach((func, index) => {
+        step.elementOrder.push({
+          type: 'function',
+          index: index
+        });
+      });
+      
+      // Agregar textos existentes al orden  
+      step.textElements.forEach((textEl, index) => {
+        step.elementOrder.push({
+          type: 'text',
+          index: index
+        });
+      });
+    }
+    
+    // Si no hay elementos, mostrar mensaje vacío
+    if (step.elementOrder.length === 0) {
+      elementsHTML = `
+        <div class="step-elements-empty">
+          <div class="step-elements-empty-icon">📋</div>
+          No hay elementos en este paso. Agrega funciones o textos usando los botones de abajo.
+        </div>
+      `;
+      return elementsHTML;
+    }
+    
+    // Renderizar elementos según el orden definido
+    step.elementOrder.forEach((orderItem, globalIndex) => {
+      if (orderItem.type === 'function' && step.functions[orderItem.index]) {
+        elementsHTML += this.renderStepFunctionWithGlobalIndex(
+          stepIndex, 
+          orderItem.index, 
+          globalIndex, 
+          step.functions[orderItem.index], 
+          step.elementOrder.length
+        );
+      } else if (orderItem.type === 'text' && step.textElements[orderItem.index]) {
+        elementsHTML += this.renderTextElementWithGlobalIndex(
+          stepIndex, 
+          orderItem.index, 
+          globalIndex, 
+          step.textElements[orderItem.index], 
+          step.elementOrder.length
+        );
+      }
+    });
+    
+    return elementsHTML;
+  }
+
+  renderStepFunctionWithGlobalIndex(stepIndex, funcIndex, globalIndex, func, totalElements) {
+    // Verificar que functions esté disponible
+    if (!window.functions || !window.functions.getAll) {
+      return `
+        <div class="step-element-container step-element-function">
+          <div class="step-element-header">
+            <span class="step-element-icon">⚡</span>
+            <span class="step-element-title">Cargando funciones...</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const availableFunctions = window.functions.getAll();
+    
+    if (Object.keys(availableFunctions).length === 0) {
+      return `
+        <div class="step-element-container step-element-function">
+          <div class="step-element-header">
+            <span class="step-element-icon">⚡</span>
+            <span class="step-element-title">No hay funciones disponibles</span>
+          </div>
+          <div class="step-element-content">
+            <em>Ve a la pestaña "Funciones" para crear algunas.</em>
+          </div>
+        </div>
+      `;
+    }
+    
+    const funcDef = availableFunctions[func.type];
+    
+    if (!funcDef) {
+      return `
+        <div class="step-element-container step-element-function" style="border-left-color: var(--danger);">
+          <div class="step-element-header">
+            <span class="step-element-icon">⚠️</span>
+            <span class="step-element-title">Función no encontrada: ${func.type}</span>
+            <div class="step-element-controls">
+              <button class="step-btn btn-danger" onclick="stepFunctionManager.removeFunction(${stepIndex}, ${funcIndex})" title="Eliminar función">×</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    const functionControls = this.renderGlobalElementControls('function', stepIndex, funcIndex, globalIndex, totalElements);
+    
+    return `
+      <div class="step-element-container step-element-function">
+        <div class="step-element-header">
+          <span class="step-element-icon">⚡</span>
+          <span class="step-element-title">${funcDef.name}</span>
+          ${functionControls}
+        </div>
+        
+        <div class="step-element-content">
+          <div class="form-group">
+            <label>Función:</label>
+            <select onchange="stepFunctionManager.changeFunctionType(${stepIndex}, ${funcIndex}, this.value)">
+              ${Object.keys(availableFunctions).map(key => 
+                `<option value="${key}" ${key === func.type ? 'selected' : ''}>${availableFunctions[key].name}</option>`
+              ).join('')}
+            </select>
+          </div>
+          
+          ${this.renderPredefinedParams(stepIndex, funcIndex, func, funcDef)}
+          ${this.renderCustomFields(stepIndex, funcIndex, func)}
+        </div>
+      </div>
+    `;
+  }
+
+  renderTextElementWithGlobalIndex(stepIndex, textIndex, globalIndex, textEl, totalElements) {
+    const textControls = this.renderGlobalElementControls('text', stepIndex, textIndex, globalIndex, totalElements);
+    
+    return `
+      <div class="step-element-container step-element-text">
+        <div class="step-element-header">
+          <span class="step-element-icon">📝</span>
+          <span class="step-element-title">Texto adicional</span>
+          ${textControls}
+        </div>
+        
+        <div class="step-element-content">
+          <div class="form-group">
+            <label>Texto:</label>
+            <textarea class="step-text-input autoresize max-height" 
+                      placeholder="Texto adicional para este paso..." 
+                      oninput="flowManager.updateTextElement(${stepIndex}, ${textIndex}, this.value)">${TextUtils.escapeForInputValue(textEl.text || '')}</textarea>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderGlobalElementControls(elementType, stepIndex, elementIndex, globalIndex, totalElements) {
+    return `
+      <div class="step-element-controls">
+        <button class="step-btn" onclick="flowManager.duplicateElementInStep('${elementType}', ${stepIndex}, ${elementIndex})" title="Duplicar ${elementType === 'function' ? 'función' : 'texto'}">📄</button>
+        ${globalIndex > 0 ? `<button class="step-btn" onclick="flowManager.moveElementByGlobalIndex(${stepIndex}, ${globalIndex}, -1)" title="Subir ${elementType === 'function' ? 'función' : 'texto'}">↑</button>` : ''}
+        ${globalIndex < totalElements - 1 ? `<button class="step-btn" onclick="flowManager.moveElementByGlobalIndex(${stepIndex}, ${globalIndex}, 1)" title="Bajar ${elementType === 'function' ? 'función' : 'texto'}">↓</button>` : ''}
+        <button class="step-btn btn-danger" onclick="flowManager.removeElementFromStep('${elementType}', ${stepIndex}, ${elementIndex})" title="Eliminar ${elementType === 'function' ? 'función' : 'texto'}">×</button>
+      </div>
+    `;
+  }
+
+  moveElementByGlobalIndex(stepIndex, globalIndex, direction) {
+    const step = state.flows[state.currentFlow].steps[stepIndex];
+    
+    // Asegurar que elementOrder existe
+    if (!step.elementOrder) {
+      console.warn('elementOrder no existe, recreando...');
+      return;
+    }
+    
+    const newGlobalIndex = globalIndex + direction;
+    
+    // Verificar límites
+    if (newGlobalIndex < 0 || newGlobalIndex >= step.elementOrder.length) return;
+    
+    // Intercambiar elementos en el orden
+    [step.elementOrder[globalIndex], step.elementOrder[newGlobalIndex]] = 
+    [step.elementOrder[newGlobalIndex], step.elementOrder[globalIndex]];
+    
+    // Re-renderizar y actualizar
+    this.renderSteps();
+    this.updatePrompt();
+    this.scheduleAutoSave();
+  }
+
+  renderStepFunction(stepIndex, funcIndex, func, totalFunctions, totalTexts) {
+    // Verificar que functions esté disponible
+    if (!window.functions || !window.functions.getAll) {
+      return `
+        <div class="step-element-container step-element-function">
+          <div class="step-element-header">
+            <span class="step-element-icon">⚡</span>
+            <span class="step-element-title">Cargando funciones...</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const availableFunctions = window.functions.getAll();
+    
+    if (Object.keys(availableFunctions).length === 0) {
+      return `
+        <div class="step-element-container step-element-function">
+          <div class="step-element-header">
+            <span class="step-element-icon">⚡</span>
+            <span class="step-element-title">No hay funciones disponibles</span>
+          </div>
+          <div class="step-element-content">
+            <em>Ve a la pestaña "Funciones" para crear algunas.</em>
+          </div>
+        </div>
+      `;
+    }
+    
+    const funcDef = availableFunctions[func.type];
+    
+    if (!funcDef) {
+      return `
+        <div class="step-element-container step-element-function" style="border-left-color: var(--danger);">
+          <div class="step-element-header">
+            <span class="step-element-icon">⚠️</span>
+            <span class="step-element-title">Función no encontrada: ${func.type}</span>
+            <div class="step-element-controls">
+              <button class="step-btn btn-danger" onclick="stepFunctionManager.removeFunction(${stepIndex}, ${funcIndex})" title="Eliminar función">×</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    const functionControls = this.renderElementControls('function', stepIndex, funcIndex, totalFunctions, totalTexts);
+    
+    return `
+      <div class="step-element-container step-element-function">
+        <div class="step-element-header">
+          <span class="step-element-icon">⚡</span>
+          <span class="step-element-title">${funcDef.name}</span>
+          ${functionControls}
+        </div>
+        
+        <div class="step-element-content">
+          <div class="form-group">
+            <label>Función:</label>
+            <select onchange="stepFunctionManager.changeFunctionType(${stepIndex}, ${funcIndex}, this.value)">
+              ${Object.keys(availableFunctions).map(key => 
+                `<option value="${key}" ${key === func.type ? 'selected' : ''}>${availableFunctions[key].name}</option>`
+              ).join('')}
+            </select>
+          </div>
+          
+          ${this.renderPredefinedParams(stepIndex, funcIndex, func, funcDef)}
+          ${this.renderCustomFields(stepIndex, funcIndex, func)}
+        </div>
+      </div>
+    `;
+  }
+
+  renderTextElement(stepIndex, textIndex, textEl, totalTexts, totalFunctions) {
+    const textControls = this.renderElementControls('text', stepIndex, textIndex, totalTexts, totalFunctions);
+    
+    return `
+      <div class="step-element-container step-element-text">
+        <div class="step-element-header">
+          <span class="step-element-icon">📝</span>
+          <span class="step-element-title">Texto adicional</span>
+          ${textControls}
+        </div>
+        
+        <div class="step-element-content">
+          <div class="form-group">
+            <label>Texto:</label>
+            <textarea class="step-text-input autoresize max-height" 
+                      placeholder="Texto adicional para este paso..." 
+                      oninput="flowManager.updateTextElement(${stepIndex}, ${textIndex}, this.value)">${TextUtils.escapeForInputValue(textEl.text || '')}</textarea>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderElementControls(elementType, stepIndex, elementIndex, totalOfType, totalOfOtherType) {
+    const totalElements = totalOfType + totalOfOtherType;
+    
+    return `
+      <div class="step-element-controls">
+        <button class="step-btn" onclick="flowManager.duplicateElementInStep('${elementType}', ${stepIndex}, ${elementIndex})" title="Duplicar ${elementType === 'function' ? 'función' : 'texto'}">📄</button>
+        <button class="step-btn" onclick="flowManager.moveElementInStep('${elementType}', ${stepIndex}, ${elementIndex}, -1)" title="Subir ${elementType === 'function' ? 'función' : 'texto'}">↑</button>
+        <button class="step-btn" onclick="flowManager.moveElementInStep('${elementType}', ${stepIndex}, ${elementIndex}, 1)" title="Bajar ${elementType === 'function' ? 'función' : 'texto'}">↓</button>
+        <button class="step-btn btn-danger" onclick="flowManager.removeElementFromStep('${elementType}', ${stepIndex}, ${elementIndex})" title="Eliminar ${elementType === 'function' ? 'función' : 'texto'}">×</button>
+      </div>
+    `;
+  }
+
+  duplicateElementInStep(elementType, stepIndex, elementIndex) {
+    if (elementType === 'function') {
+      stepFunctionManager.duplicateFunction(stepIndex, elementIndex);
+    } else if (elementType === 'text') {
+      this.duplicateTextElement(stepIndex, elementIndex);
+    }
+  }
+
+  removeElementFromStep(elementType, stepIndex, elementIndex) {
+    if (elementType === 'function') {
+      stepFunctionManager.removeFunction(stepIndex, elementIndex);
+    } else if (elementType === 'text') {
+      this.removeTextElement(stepIndex, elementIndex);
+    }
   }
 
   renderStepControls(index, totalSteps) {
@@ -293,89 +849,6 @@ class FlowManager {
         ${index < totalSteps - 1 ? `<button class="step-btn" onclick="flowManager.moveStep(${index}, 1)" title="Bajar">↓</button>` : ''}
         <button class="step-btn" onclick="flowManager.scrollToStepInOutput(${index})" title="Ir a este paso específico en el resultado" style="background: #059669; color: white;">📍</button>
         <button class="step-btn btn-danger" onclick="flowManager.removeStep(${index})" title="Eliminar">×</button>
-      </div>
-    `;
-  }
-
-  renderStepFunctions(stepIndex, stepFunctions) {
-    // Verificar que functions esté disponible
-    if (!window.functions || !window.functions.getAll) {
-      return `
-        <div style="margin-top: 12px; padding: 12px; background: var(--bg-tertiary); border-radius: 6px; color: var(--text-secondary);">
-          <em>Cargando funciones...</em>
-        </div>
-      `;
-    }
-
-    const availableFunctions = window.functions.getAll();
-    
-    if (Object.keys(availableFunctions).length === 0) {
-      return `
-        <div style="margin-top: 12px; padding: 12px; background: var(--bg-tertiary); border-radius: 6px; color: var(--text-secondary);">
-          <em>No hay funciones disponibles. Ve a la pestaña "Funciones" para crear algunas.</em>
-        </div>
-      `;
-    }
-    
-    return `
-      <div style="margin-top: 12px;">
-        <label style="margin-bottom: 8px;">Funciones a ejecutar:</label>
-        ${stepFunctions.map((func, funcIndex) => 
-          this.renderStepFunction(stepIndex, funcIndex, func, stepFunctions.length)
-        ).join('')}
-        <button type="button" class="btn-small" onclick="stepFunctionManager.addFunction(${stepIndex})">➕ Agregar Función</button>
-      </div>
-    `;
-  }
-
-  renderStepFunction(stepIndex, funcIndex, func, totalFunctions) {
-    const availableFunctions = window.functions.getAll();
-    const funcDef = availableFunctions[func.type];
-    
-    if (!funcDef) {
-      return `
-        <div class="function" style="border-color: var(--danger);">
-          <div class="function-header">
-            <strong style="color: var(--danger);">⚠️ Función no encontrada: ${func.type}</strong>
-            <div style="display: flex; gap: 4px;">
-              <button class="delete-btn" onclick="stepFunctionManager.removeFunction(${stepIndex}, ${funcIndex})">×</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-    
-    const functionControls = this.renderFunctionControls(stepIndex, funcIndex, totalFunctions);
-    
-    return `
-      <div class="function">
-        <div class="function-header">
-          <strong>${funcDef.name}</strong>
-          ${functionControls}
-        </div>
-        
-        <div class="form-group">
-          <label>Función:</label>
-          <select onchange="stepFunctionManager.changeFunctionType(${stepIndex}, ${funcIndex}, this.value)">
-            ${Object.keys(availableFunctions).map(key => 
-              `<option value="${key}" ${key === func.type ? 'selected' : ''}>${availableFunctions[key].name}</option>`
-            ).join('')}
-          </select>
-        </div>
-        
-        ${this.renderPredefinedParams(stepIndex, funcIndex, func, funcDef)}
-        ${this.renderCustomFields(stepIndex, funcIndex, func)}
-      </div>
-    `;
-  }
-
-  renderFunctionControls(stepIndex, funcIndex, totalFunctions) {
-    return `
-      <div class="step-controls">
-        <button class="step-btn" onclick="stepFunctionManager.duplicateFunction(${stepIndex}, ${funcIndex})" title="Duplicar función">📄</button>
-        ${funcIndex > 0 ? `<button class="step-btn" onclick="stepFunctionManager.moveStepFunction(${stepIndex}, ${funcIndex}, -1)" title="Subir función">↑</button>` : ''}
-        ${funcIndex < totalFunctions - 1 ? `<button class="step-btn" onclick="stepFunctionManager.moveStepFunction(${stepIndex}, ${funcIndex}, 1)" title="Bajar función">↓</button>` : ''}
-        <button class="step-btn btn-danger" onclick="stepFunctionManager.removeFunction(${stepIndex}, ${funcIndex})" title="Eliminar función">×</button>
       </div>
     `;
   }
@@ -508,6 +981,14 @@ class FlowManager {
           }
         });
       }
+      
+      if (step.textElements && step.textElements.length > 0) {
+        step.textElements.forEach(textEl => {
+          if (textEl.text && textEl.text.trim()) {
+            textEl.text = textEl.text + " - Copia";
+          }
+        });
+      }
     });
     
     return duplicated;
@@ -541,6 +1022,24 @@ class FlowManager {
           });
         }
       });
+    }
+    
+    if (duplicated.textElements && duplicated.textElements.length > 0) {
+      duplicated.textElements.forEach(textEl => {
+        if (textEl.text && textEl.text.trim()) {
+          textEl.text = textEl.text + " - Copia";
+        }
+      });
+    }
+    
+    return duplicated;
+  }
+
+  duplicateTextElementWithSuffix(textEl) {
+    const duplicated = JSON.parse(JSON.stringify(textEl));
+    
+    if (duplicated.text && duplicated.text.trim()) {
+      duplicated.text = duplicated.text + " - Copia";
     }
     
     return duplicated;
@@ -689,6 +1188,14 @@ window.duplicateStep = (index) => flowManager.duplicateStep(index);
 window.removeStep = (index) => flowManager.removeStep(index);
 window.moveStep = (index, direction) => flowManager.moveStep(index, direction);
 window.updateStepText = (index, value) => flowManager.updateStepText(index, value);
+window.addTextElement = (stepIndex) => flowManager.addTextElement(stepIndex);
+window.duplicateTextElement = (stepIndex, textIndex) => flowManager.duplicateTextElement(stepIndex, textIndex);
+window.removeTextElement = (stepIndex, textIndex) => flowManager.removeTextElement(stepIndex, textIndex);
+window.moveTextElement = (stepIndex, textIndex, direction) => flowManager.moveTextElement(stepIndex, textIndex, direction);
+window.updateTextElement = (stepIndex, textIndex, value) => flowManager.updateTextElement(stepIndex, textIndex, value);
+window.duplicateElementInStep = (elementType, stepIndex, elementIndex) => flowManager.duplicateElementInStep(elementType, stepIndex, elementIndex);
+window.removeElementFromStep = (elementType, stepIndex, elementIndex) => flowManager.removeElementFromStep(elementType, stepIndex, elementIndex);
+window.moveElementInStep = (elementType, stepIndex, elementIndex, direction) => flowManager.moveElementInStep(elementType, stepIndex, elementIndex, direction);
 window.scrollToStepInOutput = (stepIndex) => flowManager.scrollToStepInOutput(stepIndex);
 window.scrollToFlowInOutput = () => flowManager.scrollToFlowInOutput();
 window.renderFlows = () => flowManager.renderFlows();

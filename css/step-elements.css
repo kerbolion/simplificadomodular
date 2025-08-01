@@ -1,0 +1,309 @@
+/* ==========================================
+   ESTILOS PARA ELEMENTOS DE PASOS
+   ========================================== */
+
+/* Contenedor principal de elementos del paso */
+#step-elements-container {
+  margin-top: 16px;
+}
+
+/* Estilo para elementos mixtos (funciones y textos) */
+.step-element-container {
+  margin-bottom: 12px;
+}
+
+/* Elementos de función con borde morado */
+.step-element-function {
+  border-left: 4px solid #7c3aed;
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.05), transparent);
+}
+
+/* Elementos de texto con borde verde */
+.step-element-text {
+  border-left: 4px solid #059669;
+  background: linear-gradient(90deg, rgba(5, 150, 105, 0.05), transparent);
+}
+
+/* Encabezados de elementos con iconos */
+.step-element-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px 6px 0 0;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.step-element-icon {
+  font-size: 16px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.step-element-title {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Controles de elementos */
+.step-element-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* Estado vacío para pasos sin elementos */
+.step-elements-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-secondary);
+  font-style: italic;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  border: 1px dashed var(--border-secondary);
+  margin-bottom: 12px;
+}
+
+.step-elements-empty-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+/* Contador de elementos */
+.step-elements-count {
+  color: var(--text-accent);
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: block;
+  background: var(--text-accent)10;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid var(--text-accent);
+}
+
+.step-elements-count .count-number {
+  background: var(--text-accent);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+/* Botones de agregar elementos */
+.step-add-elements {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.btn-add-function {
+  background: linear-gradient(90deg, #7c3aed, #a855f7);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-add-function:hover {
+  background: linear-gradient(90deg, #6d28d9, #9333ea);
+  transform: translateY(-1px);
+}
+
+.btn-add-text {
+  background: linear-gradient(90deg, #059669, #10b981);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-add-text:hover {
+  background: linear-gradient(90deg, #047857, #059669);
+  transform: translateY(-1px);
+}
+
+/* Animaciones para elementos nuevos */
+.step-element-new {
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Efectos hover para elementos */
+.step-element-container:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-light);
+}
+
+.step-element-container:hover .step-element-header {
+  background: linear-gradient(90deg, var(--bg-secondary), var(--bg-tertiary));
+}
+
+/* Estilos específicos para diferentes tipos de contenido */
+.step-element-content {
+  padding: 12px;
+}
+
+/* Elementos de función */
+.step-element-function .step-element-content {
+  background: rgba(124, 58, 237, 0.02);
+}
+
+/* Elementos de texto */
+.step-element-text .step-element-content {
+  background: rgba(5, 150, 105, 0.02);
+}
+
+/* Textarea específica para elementos de texto */
+.step-text-input {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  border: 1px solid var(--border-secondary);
+  border-radius: 6px;
+  padding: 10px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: border-color 0.2s ease;
+}
+
+.step-text-input:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
+}
+
+.step-text-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+/* Indicadores visuales para diferentes tipos */
+.step-element-function::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #7c3aed, #a855f7);
+  border-radius: 0 2px 2px 0;
+}
+
+.step-element-text::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #059669, #10b981);
+  border-radius: 0 2px 2px 0;
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+  .step-add-elements {
+    flex-direction: column;
+  }
+  
+  .btn-add-function,
+  .btn-add-text {
+    justify-content: center;
+    padding: 12px;
+  }
+  
+  .step-element-controls {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+  
+  .step-element-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .step-element-title {
+    text-align: center;
+  }
+  
+  .step-element-controls {
+    justify-content: center;
+    margin-left: 0;
+  }
+}
+
+/* Estados de drag and drop (futuro) */
+.step-element-dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+  z-index: 1000;
+}
+
+.step-element-drop-target {
+  border-color: var(--text-accent) !important;
+  background: var(--text-accent)20 !important;
+}
+
+/* Efecto de pulsación para feedback */
+.step-element-container.pulse {
+  animation: pulse 0.5s ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Mejoras para temas oscuros */
+[data-theme="dark"] .step-element-function {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.1), transparent);
+}
+
+[data-theme="dark"] .step-element-text {
+  background: linear-gradient(90deg, rgba(5, 150, 105, 0.1), transparent);
+}
+
+[data-theme="dark"] .step-elements-empty {
+  border-color: var(--border-secondary);
+  background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .step-text-input {
+  background: var(--bg-tertiary);
+  border-color: var(--border-secondary);
+}
+
+[data-theme="dark"] .step-text-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}

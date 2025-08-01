@@ -1,5 +1,5 @@
 // ==========================================
-// GESTIÓN DE PROYECTOS OPTIMIZADA
+// GESTIÓN DE PROYECTOS OPTIMIZADA CON MIGRACIÓN DE TEXT ELEMENTS
 // ==========================================
 
 class ProjectManager {
@@ -198,7 +198,7 @@ class ProjectManager {
       modified: project.modified || new Date().toISOString(),
       versions: project.versions || {},
       exportedAt: new Date().toISOString(),
-      exportVersion: '2.0'
+      exportVersion: '2.1'
     };
     
     this.downloadFile(JSON.stringify(exportData, null, 2), `${this.current}.json`, 'application/json');
@@ -342,7 +342,11 @@ class ProjectManager {
     
     if (data.sections) state.sections = data.sections;
     if (data.faqs) state.faqs = data.faqs;
-    if (data.flows) state.flows = data.flows;
+    if (data.flows) {
+      state.flows = data.flows;
+      // MIGRACIÓN: Asegurar que todos los pasos tengan textElements
+      this.migrateFlowsToTextElements(state.flows);
+    }
     if (data.currentFlow !== undefined) state.currentFlow = data.currentFlow;
     if (data.currentSection !== undefined) state.currentSection = data.currentSection;
     
@@ -375,6 +379,51 @@ class ProjectManager {
     }, 100);
 
     this.migrateOldConfigData(data);
+  }
+
+  // ==========================================
+  // MIGRACIÓN DE DATOS
+  // ==========================================
+
+  migrateFlowsToTextElements(flows) {
+    flows.forEach(flow => {
+      if (flow.steps) {
+        flow.steps.forEach(step => {
+          // Asegurar que textElements existe
+          if (!step.textElements) {
+            step.textElements = [];
+          }
+          
+          // Asegurar que functions existe
+          if (!step.functions) {
+            step.functions = [];
+          }
+          
+          // NUEVO: Migrar elementOrder para orden intercalado
+          if (!step.elementOrder) {
+            step.elementOrder = [];
+            
+            // Agregar funciones existentes al orden
+            step.functions.forEach((func, index) => {
+              step.elementOrder.push({
+                type: 'function',
+                index: index
+              });
+            });
+            
+            // Agregar textos existentes al orden
+            step.textElements.forEach((textEl, index) => {
+              step.elementOrder.push({
+                type: 'text',
+                index: index
+              });
+            });
+          }
+        });
+      }
+    });
+    
+    console.log('Migración de textElements y elementOrder completada');
   }
 
   loadEmptyProject() {

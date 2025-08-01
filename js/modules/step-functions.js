@@ -1,5 +1,5 @@
 // ==========================================
-// GESTIÓN DE FUNCIONES EN PASOS OPTIMIZADA
+// GESTIÓN DE FUNCIONES EN PASOS OPTIMIZADA CON ELEMENT ORDER
 // ==========================================
 
 class StepFunctionManager {
@@ -16,9 +16,19 @@ class StepFunctionManager {
       return;
     }
     
-    state.flows[state.currentFlow].steps[stepIndex].functions.push({
+    const step = state.flows[state.currentFlow].steps[stepIndex];
+    if (!step.elementOrder) step.elementOrder = [];
+    
+    const newFunctionIndex = step.functions.length;
+    step.functions.push({
       type: firstFunc,
       customFields: []
+    });
+    
+    // Agregar al orden global
+    step.elementOrder.push({
+      type: 'function',
+      index: newFunctionIndex
     });
     
     this.updateUI();
@@ -28,13 +38,46 @@ class StepFunctionManager {
     const functionToDuplicate = state.flows[state.currentFlow].steps[stepIndex].functions[funcIndex];
     const duplicatedFunction = this.duplicateFunctionWithSuffix(functionToDuplicate);
     
-    state.flows[state.currentFlow].steps[stepIndex].functions.splice(funcIndex + 1, 0, duplicatedFunction);
+    const step = state.flows[state.currentFlow].steps[stepIndex];
+    if (!step.elementOrder) step.elementOrder = [];
+    
+    const newFunctionIndex = step.functions.length;
+    step.functions.push(duplicatedFunction);
+    
+    // Encontrar la posición en elementOrder de la función original
+    const originalOrderIndex = step.elementOrder.findIndex(
+      item => item.type === 'function' && item.index === funcIndex
+    );
+    
+    // Insertar la duplicada justo después de la original
+    const insertPosition = originalOrderIndex + 1;
+    step.elementOrder.splice(insertPosition, 0, {
+      type: 'function',
+      index: newFunctionIndex
+    });
+    
     this.updateUI();
   }
 
   removeFunction(stepIndex, funcIndex) {
     if (confirm('¿Eliminar esta función?')) {
-      state.flows[state.currentFlow].steps[stepIndex].functions.splice(funcIndex, 1);
+      const step = state.flows[state.currentFlow].steps[stepIndex];
+      
+      // Remover de functions
+      step.functions.splice(funcIndex, 1);
+      
+      // Remover de elementOrder y actualizar índices
+      step.elementOrder = step.elementOrder.filter(item => {
+        if (item.type === 'function') {
+          if (item.index === funcIndex) {
+            return false; // Eliminar este item
+          } else if (item.index > funcIndex) {
+            item.index--; // Decrementar índices superiores
+          }
+        }
+        return true;
+      });
+      
       this.updateUI();
     }
   }
@@ -52,13 +95,9 @@ class StepFunctionManager {
   // ==========================================
 
   moveStepFunction(stepIndex, funcIndex, direction) {
-    const stepFunctions = state.flows[state.currentFlow].steps[stepIndex].functions;
-    const newIndex = funcIndex + direction;
-    
-    if (newIndex >= 0 && newIndex < stepFunctions.length) {
-      [stepFunctions[funcIndex], stepFunctions[newIndex]] = [stepFunctions[newIndex], stepFunctions[funcIndex]];
-      this.updateUI();
-    }
+    // Esta función ahora es manejada por flowManager.moveElementByGlobalIndex
+    // Mantener por compatibilidad pero redirigir
+    console.warn('moveStepFunction deprecated, usar moveElementByGlobalIndex');
   }
 
   // ==========================================

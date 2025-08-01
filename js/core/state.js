@@ -1,5 +1,5 @@
 // ==========================================
-// ESTADO GLOBAL OPTIMIZADO
+// ESTADO GLOBAL OPTIMIZADO CON TEXT ELEMENTS
 // ==========================================
 
 const state = {
@@ -12,8 +12,18 @@ const state = {
   flows: [{
     name: "Flujo Principal",
     steps: [
-      { text: "Saluda al cliente y pregúntale si desea retirar en tienda o envío a domicilio", functions: [] },
-      { text: "Solicita el pedido (productos y cantidades) y, si aplica, la dirección para envío.", functions: [] }
+      { 
+        text: "Saluda al cliente y pregúntale si desea retirar en tienda o envío a domicilio", 
+        functions: [],
+        textElements: [],
+        elementOrder: []
+      },
+      { 
+        text: "Solicita el pedido (productos y cantidades) y, si aplica, la dirección para envío.",
+        functions: [],
+        textElements: [],
+        elementOrder: []
+      }
     ]
   }],
   
